@@ -15,7 +15,8 @@ create table filesystem_entry (
 
       -- should we really constrain the filename to be not null? What about
       -- emails and other documents stored elsewhere? Archive files?
-    , filename     unique generated always as (json_extract(entry_json, '$.filename'))
+    , mountpoint   generated always as (json_extract(entry_json, '$.mountpoint'))
+    , filename     generated always as (json_extract(entry_json, '$.filename'))
     , mtime        generated always as (json_extract(entry_json, '$.mtime'))
     , filesize     generated always as (json_extract(entry_json, '$.filesize'))
     , sha256       generated always as (json_extract(entry_json, '$.sha256'))
@@ -34,7 +35,8 @@ create table filesystem_entry (
 );
 create unique index idx_filesystem_entry_entry_id on filesystem_entry (entry_id);
 -- We need this one so we can auto-create new rows for files
-create unique index idx_filesystem_entry_filename on filesystem_entry (filename);
+create unique index idx_filesystem_entry_filename on filesystem_entry (mountpoint, filename);
+create index idx_filesystem_entry_filename_entry_id on filesystem_entry (mountpoint, filename, entry_id);
 
 -- See also Audio::Directory
 -- also, tags?!

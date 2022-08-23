@@ -159,6 +159,10 @@ our %file_properties = (
     # '$.content.title' ?
     # '$.content.text' ?
     # '$.content.html' ?
+    '$.mountpoint' => sub( $info ) {
+        $info->{mountpoint} = $store->get_mountpoint_alias( $info->{filename});
+        1
+    },
     '$.sha256' => sub( $info ) {
         my $file = $info->{filename};
         if( $info->{entry_type} eq 'file' ) {
@@ -180,8 +184,9 @@ our %file_properties = (
         }
     },
     '$.content.title' => sub( $info ) {
-        return if $info->{mime_type} eq 'audio/x-mpegurl';
         if( $info->{mime_type} =~ m!^audio/! ) {
+            return if $info->{mime_type} eq 'audio/x-mpegurl';
+            return if $info->{mime_type} eq 'audio/x-scpls';
             my $audio_info = audio_info( $info->{filename} );
             for( qw(title artist album track duration)) {
                 $info->{content}->{$_} //= $audio_info->{$_}

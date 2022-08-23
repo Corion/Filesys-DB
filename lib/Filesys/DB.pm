@@ -79,19 +79,18 @@ sub get_mountpoint_alias( $self, $filename ) {
 
 sub to_alias( $self, $filename ) {
     my ($mp,$alias) = $self->get_mountpoint_alias( $filename );
-    $filename =~ s!^\Q$mp\E!$alias!;
+    $filename =~ s!^\Q$mp\E!!;
     return $filename
 }
 
-sub to_local( $self, $filename ) {
+sub to_local( $self, $filename, $mountpoint ) {
     my $mp = $self->mountpoints;
-    for my $alias (reverse sort { length $a <=> length $b || $a cmp $b } keys %{ $mp }) {
-        if( index( $filename, $alias ) == 0 ) {
-            $filename =~ s!^\Q$alias\E!$mp->{$alias}!;
-            return $filename
-        }
+
+    if( ! exists $self->mountpoints->{ $mountpoint }) {
+        croak "Unknown mountpoint '$mountpoint'";
     }
-    croak "Unknown mountpoint in '$filename'.";
+
+    return $self->mountpoints->{ $mountpoint } . "/" . $filename;
 }
 
 # here, we take the path as primary key:
