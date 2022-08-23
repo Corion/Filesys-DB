@@ -34,14 +34,19 @@ sub _connect( $self ) {
 sub selectall_named {
     # No subroutine signature since we need to preserve the aliases in @_
     my( $self, $sql ) = splice @_, 0, 2;
-    my $dbh = $self->dbh;
 
     # Gather the names of the variables used in the routine calling us
     my %parameters = map {
         var_name(1, \$_) => $_
     } @_;
 
-    my $sth = $dbh->prepare($sql);
+    my $sth;
+    if( ref $sql ) {
+        $sth = $sql;
+    } else {
+        my $dbh = $self->dbh;
+        $sth = $dbh->prepare($sql);
+    };
     my $parameter_names = $sth->{ParamValues};
 
     while (my ($name,$value) = each %$parameter_names) {
