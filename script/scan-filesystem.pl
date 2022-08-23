@@ -6,21 +6,19 @@ use Filter::signatures;
 use feature 'signatures';
 no warnings 'experimental::signatures';
 
-use DBI ':sql_types';
-use DBD::SQLite;
-use lib '../Filesys-Scanner/lib';
+use Filesys::DB;
 use Carp 'croak';
-use PadWalker 'var_name'; # for scope magic...
-use DBIx::RunSQL;
 use Getopt::Long;
 use POSIX 'strftime';
 use Encode 'encode', 'decode';
 
-use JSON 'encode_json', 'decode_json';
 use JSON::Path;
+
+use File::Basename;
 
 use Digest::SHA;
 use MIME::Detect;
+use Music::Tag 'traditional' => 1;
 
 GetOptions(
     'mountpoint|m=s' => \my $mountpoint,
@@ -32,7 +30,12 @@ $mountpoint //= $ARGV[0];
 
 # We start out by storing information about our music collection
 
-my $dbh = DBI->connect('dbi:SQLite:dbname=db/filesys-db.sqlite', undef, undef, { RaiseError => 1, PrintError => 0 });
+my $store = Filesys::DB->new(
+    mountpoints => {
+        $mount_alias => $mountpoint,
+    },
+);
+# my $dbh = DBI->connect('dbi:SQLite:dbname=db/filesys-db.sqlite', undef, undef, { RaiseError => 1, PrintError => 0 });
 
 # We want a breadth-first FS scan, preferring the most recent entries
 # over older entries (as we assume that old entries don't change much)
@@ -97,94 +100,6 @@ sub basic_direntry_info( $ent, $stat, $defaults ) {
     }
 }
 
-sub selectall_named {
-    # No subroutine signature since we need to preserve the aliases in @_
-    my( $dbh, $sql ) = splice @_, 0, 2;
-
-    # Gather the names of the variables used in the routine calling us
-    my %parameters = map {
-        var_name(1, \$_) => $_
-    } @_;
-
-    my $sth = $dbh->prepare($sql);
-    my $parameter_names = $sth->{ParamValues};
-
-    while (my ($name,$value) = each %$parameter_names) {
-        (my $perl_name) = ($name =~ m!(\w+)!);
-        $perl_name = '$' . $perl_name;
-        if( ! exists $parameters{$perl_name}) {
-            croak "Missing bind parameter '$perl_name'";
-        };
-        #use Data::Dumper; local $Data::Dumper::Useqq = 1;
-        #warn "$name => " . Dumper($parameters{$perl_name});
-        $sth->bind_param($name => $parameters{$perl_name}, SQL_VARCHAR)
-    };
-
-    $sth->execute;
-    # we also want to lock the hashes we return here, I guess
-    return $sth->fetchall_arrayref({})
-};
-
-# here, we take the path as primary key:
-sub insert_or_update_direntry( $info, $mp=$mountpoint, $alias=$mount_alias ) {
-    my $local_filename = $info->{filename};
-    $info->{filename} =~ s!^\Q$mp\E!$alias!;
-    my $value = encode_json( $info );
-
-    # Clean out all values that should not be stored:
-    delete @{$info}{ (grep { /^_temp/ } keys %$info) };
-
-    my $res;
-    if( defined $info->{entry_id}) {
-        my $entry_id = $info->{entry_id};
-        my $tmp_res = selectall_named($dbh, <<'SQL', $value, $entry_id )->[0];
-            insert into filesystem_entry (entry_id, entry_json)
-            values (:entry_id, :value)
-            on conflict(entry_id) do
-            update set entry_json = :value
-            returning entry_id
-SQL
-        $res = $tmp_res->{entry_id};
-
-    } else {
-        # $info->{filename} must be unique
-        my $tmp_res = selectall_named($dbh, <<'SQL', $value );
-            insert into filesystem_entry (entry_json)
-            values (:value)
-            on conflict(filename) do
-            update set entry_json = :value
-            returning entry_id
-SQL
-        $res = $tmp_res->[0]->{entry_id};
-    };
-    $info->{entry_id} = $res;
-    $info->{filename} = $local_filename;
-    return $info
-}
-
-# here, we take the path as primary key:
-sub find_direntry_by_filename( $filename, $mp=$mountpoint, $alias=$mount_alias ) {
-    $filename =~ s!^\Q$mp\E!$alias!;
-
-    # All filenames will be UTF-8 encoded:
-    $filename = encode('UTF-8', $filename );
-
-    my $entry = selectall_named( $dbh, <<'SQL', $filename);
-        select entry_json
-             , entry_id
-          from filesystem_entry
-        where filename = :filename
-SQL
-    my $res;
-    if( @$entry ) {
-        $res = decode_json( $entry->[0]->{entry_json} );
-        $res->{filename} = decode( 'UTF-8', $res->{filename}); # really?!
-        $res->{filename} =~ s!^\Q${alias}\E!$mp!;
-        $res->{entry_id} = $entry->[0]->{entry_id};
-    };
-    return $res
-}
-
 sub timestamp($ts=time) {
     return strftime '%Y-%m-%dT%H:%M:%SZ', gmtime($ts)
 }
@@ -213,6 +128,32 @@ sub timestamp($ts=time) {
     END { status(""); }
 }
 
+sub audio_info( $audiofile, $artist=undef, $album=undef ) {
+    # Maybe this can take over MP3 too?
+    local $MP3::Info::try_harder = 1;
+    my $tag = Music::Tag->new( $audiofile);
+
+    $tag->get_tag;
+
+    # Mush 03/10 into 03
+    if( $tag->track =~ m!(\d+)\s*/\s*\d+$! ) {
+        $tag->track( $1 );
+    };
+
+    my %info = map { $_ => $tag->$_() } qw(artist album track title duration);
+    $info{ duration } ||= '-1000'; # "unknown" if we didn't find anything
+    $audiofile =~ /\.(\w+)$/;
+    $info{ ext } = lc $1;
+
+    $info{ url } = basename( $audiofile ); # we assume the playlist will live in the same directory
+    $info{ artist } //= $artist;
+    $info{ album  } //= $album;
+    $info{ track  } = sprintf '%02d', $info{ track };
+
+    return \%info;
+}
+
+
 # This is the first set of property handlers
 our %file_properties = (
     # '$.content.title' ?
@@ -237,7 +178,17 @@ our %file_properties = (
                 return 1
             }
         }
-    }
+    },
+    '$.content.title' => sub( $info ) {
+        return if $info->{mime_type} eq 'audio/x-mpegurl';
+        if( $info->{mime_type} =~ m!^audio/! ) {
+            my $audio_info = audio_info( $info->{filename} );
+            for( qw(title artist album track duration)) {
+                $info->{content}->{$_} //= $audio_info->{$_}
+            };
+            1;
+        }
+    },
 );
 
 # Maybe we want to preseed with DB results so that we get unscanned directories
@@ -247,10 +198,10 @@ scan_tree_bf(
     queue => \@ARGV,
     file => sub($file,$stat) {
 
-        my $info = find_direntry_by_filename( $file );
+        my $info = $store->find_direntry_by_filename( $file );
         if( ! $info) {
             $info = basic_direntry_info($file,$stat,{ entry_type => 'file' });
-            $info = insert_or_update_direntry($info, $mountpoint, $mount_alias);
+            $info = $store->insert_or_update_direntry($info);
         };
         my $last_ts = $info->{last_scanned} // '';
 
@@ -276,19 +227,18 @@ scan_tree_bf(
 
         if( $info->{last_scanned} ne $last_ts ) {
             #msg( sprintf "% 16s | %s", 'update', $file);
-            $info = insert_or_update_direntry($info);
-            #use Data::Dumper; msg( Dumper $info );
+            $info = $store->insert_or_update_direntry($info);
         }
 
         # We also want to create a relation here, with our parent directory?!
 
     },
     directory => sub( $directory, $stat ) {
-        my $info = find_direntry_by_filename( $directory );
+        my $info = $store->find_direntry_by_filename( $directory );
         if( ! $info ) {
             $info = basic_direntry_info($directory,$stat,{ entry_type => 'directory' });
             #status( "-- %s (%d)", $directory, insert_or_update_direntry($info)->{entry_id} );
-            $info = insert_or_update_direntry($info);
+            $info = $store->insert_or_update_direntry($info);
         };
 
         status( sprintf "% 16s | %s", 'scan', $directory);
@@ -302,3 +252,4 @@ scan_tree_bf(
 # [ ] add media.duration column
 # [ ] add "ephemeral" or "auxiliary" file/entry type, for thumbnails and other
 #     stuff that is generated of a different source file
+# [ ] ${MOUNT} should be a separate column, "mountpoint"
