@@ -8,7 +8,6 @@ no warnings 'experimental::signatures';
 use DBI ':sql_types';
 use DBD::SQLite;
 
-
 use PadWalker 'var_name'; # for scope magic...
 use DBIx::RunSQL;
 use Encode 'encode', 'decode';
@@ -16,21 +15,23 @@ use JSON 'encode_json', 'decode_json';
 
 use Carp 'croak';
 
-has 'dbh' => (
-    is => 'ro',
-    default => \&_connect,
-);
+use lib '../Weather-MOSMIX/lib';
+with 'MooX::Role::DBIConnection';
 
 has 'mountpoints' => (
     is => 'ro',
     default => sub { {} },
 );
 
-sub _connect( $self ) {
-    # Later, we should consume the DB magic role
-    DBI->connect('dbi:SQLite:dbname=db/filesys-db.sqlite', undef, undef, { RaiseError => 1, PrintError => 0 });
-}
+around BUILDARGS => sub ($orig, $class, @args) {
+    my $args = @args == 1 && ref $args[0] ? $args[0] : { @args };
+    $args->{ dbh } //= {};
+    $args->{ dbh }->{dsn} //= 'dbi:SQLite:dbname=db/filesys-db.sqlite';
+    $args->{ dbh }->{options} //= { RaiseError => 1, PrintError => 0 };
+    return $class->$orig($args)
+};
 
+# This should go into a separate DBIx role, likely
 sub selectall_named {
     # No subroutine signature since we need to preserve the aliases in @_
     my( $self, $sql ) = splice @_, 0, 2;
