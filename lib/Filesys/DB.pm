@@ -10,7 +10,7 @@ use DBD::SQLite;
 
 use PadWalker 'var_name'; # for scope magic...
 use DBIx::RunSQL;
-use Encode 'encode', 'decode';
+use Encode 'encode', 'decode', '_utf8_off';
 use JSON 'encode_json', 'decode_json';
 
 use Carp 'croak';
@@ -135,7 +135,8 @@ SQL
 sub find_direntry_by_filename( $self, $filename ) {
     $filename = $self->to_alias($filename);
 
-    # All filenames will be UTF-8 encoded:
+    # All filenames will be UTF-8 encoded, as they live in a JSON blob,
+    # no matter their original encoding:
     $filename = encode('UTF-8', $filename );
 
     my $entry = $self->selectall_named(<<'SQL', $filename);
@@ -147,8 +148,11 @@ SQL
     my $res;
     if( @$entry ) {
         $res = decode_json( $entry->[0]->{entry_json} );
+        # The filename comes back as an UTF-8 string, but we want to
+        # get at the original octets that we originally stored:
         $res->{filename} = decode( 'UTF-8', $res->{filename}); # really?!
-        $res->{filename} = $self->to_local($res->{filename});
+        _utf8_off($res->{filename}); # a filename is octets, not UTF-8
+        $res->{filename} = $self->to_local($res->{mountpoint}, $res->{filename});
         $res->{entry_id} = $entry->[0]->{entry_id};
     };
     return $res
