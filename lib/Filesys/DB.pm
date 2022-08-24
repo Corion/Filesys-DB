@@ -32,14 +32,19 @@ around BUILDARGS => sub ($orig, $class, @args) {
 };
 
 # This should go into a separate DBIx role, likely
-sub selectall_named {
-    # No subroutine signature since we need to preserve the aliases in @_
-    my( $self, $sql ) = splice @_, 0, 2;
-
+sub bind_lexicals( $self, $sql, $level, $lexicals ) {
     # Gather the names of the variables used in the routine calling us
     my %parameters = map {
-        var_name(1, \$_) => $_
-    } @_;
+        if( ! var_name($level, \$_)) {
+            my $real_level = 1;
+            my $name;
+            do { eval {
+                $name = var_name($real_level++, \$_);
+            }} until defined $name or $@ or $real_level > $level+10;
+            croak "Mapping variable at level $level containing <$_>, but found at $real_level";
+        };
+        var_name($level, \$_) => $_
+    } @$lexicals;
 
     my $sth;
     if( ref $sql ) {
@@ -56,15 +61,40 @@ sub selectall_named {
         if( ! exists $parameters{$perl_name}) {
             croak "Missing bind parameter '$perl_name'";
         };
-        #use Data::Dumper; local $Data::Dumper::Useqq = 1;
-        #warn "$name => " . Dumper($parameters{$perl_name});
         $sth->bind_param($name => $parameters{$perl_name}, SQL_VARCHAR)
     };
 
+    return $sth
+}
+
+sub execute_named_ex( $self, %options ) {
+    $options{ level } //= 1;
+    my $sth = $self->bind_lexicals( $options{ sth }, $options{ level }+1, $options{ lexicals });
     $sth->execute;
     # we also want to lock the hashes we return here, I guess
-    return $sth->fetchall_arrayref({})
+    return $sth
 };
+
+sub execute_named {
+    my( $self, $sql ) = splice @_, 0, 2;
+    return $self->execute_named_ex(
+        sth => $sql,
+        lexicals => [@_],
+        level => 2,
+    );
+};
+
+sub selectall_named {
+    my( $self, $sql ) = splice @_, 0, 2;
+
+    my $lex = \@_;
+    my $sth = $self->execute_named_ex(
+        sth => $sql,
+        level => 2,
+        lexicals => $lex,
+    );
+    return $sth->fetchall_arrayref({})
+}
 
 sub get_mountpoint_alias( $self, $filename ) {
     my $longest;
