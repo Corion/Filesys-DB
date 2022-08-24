@@ -18,11 +18,12 @@ my $store = Filesys::DB->new(
 );
 
 my $id = $store->insert_or_update_direntry({ filename => 'test' })->{entry_id};
-#my $sth = $dbh->prepare('select * from filesystem_entry');
-#$sth->execute;
-#print DBIx::RunSQL->format_results(sth => $sth);
 
 my $new_id = $store->find_direntry_by_filename('test')->{entry_id};
-is $id, $new_id, "We can find an existing filename";
+if(! is $id, $new_id, "We can find an existing filename") {
+    my $sth = $dbh->prepare('select * from filesystem_entry');
+    $sth->execute;
+    note( DBIx::RunSQL->format_results(sth => $sth));
+};
 my $reinserted = $store->insert_or_update_direntry({ filename => 'test' })->{entry_id};
 is $reinserted, $id, "We detect duplicates";

@@ -29,4 +29,8 @@ my $info = $store->find_direntry_by_filename($filename_octets);
 ok $info, "We can find an existing filename with UTF-8 in its parts";
 is $info->{filename}, $filename_octets, "We get the same filename octets back";
 my $reinserted = $store->insert_or_update_direntry({ filename => $info->{filename} })->{entry_id};
-is $reinserted, $id, "We detect duplicates even when decoding from the filename";
+if(! is $reinserted, $id, "We detect duplicates even when decoding from the filename") {
+    my $sth = $dbh->prepare('select * from filesystem_entry');
+    $sth->execute;
+    note( DBIx::RunSQL->format_results(sth => $sth));
+};

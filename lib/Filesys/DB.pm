@@ -79,24 +79,25 @@ sub get_mountpoint_alias( $self, $filename ) {
 
 sub to_alias( $self, $filename ) {
     my ($mp,$alias) = $self->get_mountpoint_alias( $filename );
-    $filename =~ s!^\Q$mp\E!!;
-    return $filename
+    $filename =~ s!^\Q$mp[\\/]\E!!;
+    return ($alias,$filename)
 }
 
-sub to_local( $self, $filename, $mountpoint ) {
+sub to_local( $self, $mountpoint, $filename ) {
     my $mp = $self->mountpoints;
 
     if( ! exists $self->mountpoints->{ $mountpoint }) {
         croak "Unknown mountpoint '$mountpoint'";
     }
 
-    return $self->mountpoints->{ $mountpoint } . "/" . $filename;
+    return $self->mountpoints->{ $mountpoint } . $filename;
 }
 
 # here, we take the path as primary key:
 sub insert_or_update_direntry( $self, $info ) {
     my $local_filename = $info->{filename};
-    $info->{filename} = $self->to_alias( $info->{filename});
+    (my($mountpoint), $info->{filename}) = $self->to_alias( $info->{filename});
+    $info->{mountpoint} //= $mountpoint;
     my $value = encode_json( $info );
 
     # Clean out all values that should not be stored:
@@ -119,7 +120,7 @@ SQL
         my $tmp_res = $self->selectall_named(<<'SQL', $value );
             insert into filesystem_entry (entry_json)
             values (:value)
-            on conflict(filename) do
+            on conflict(mountpoint,filename) do
             update set entry_json = :value
             returning entry_id
 SQL
@@ -132,17 +133,18 @@ SQL
 
 # here, we take the path as primary key:
 sub find_direntry_by_filename( $self, $filename ) {
-    $filename = $self->to_alias($filename);
+    (my($mountpoint), $filename) = $self->to_alias($filename);
 
     # All filenames will be UTF-8 encoded, as they live in a JSON blob,
     # no matter their original encoding:
     $filename = encode('UTF-8', $filename );
 
-    my $entry = $self->selectall_named(<<'SQL', $filename);
+    my $entry = $self->selectall_named(<<'SQL', $filename, $mountpoint);
         select entry_json
              , entry_id
           from filesystem_entry
         where filename = :filename
+          and mountpoint = :mountpoint
 SQL
     my $res;
     if( @$entry ) {
