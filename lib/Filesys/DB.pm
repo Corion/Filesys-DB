@@ -189,4 +189,23 @@ SQL
     return $res
 }
 
+=head2 C<< ->integrity_check >>
+
+Run some integrity checks on the database.
+
+=cut
+
+sub integrity_check( $self ) {
+    my @res;
+    my $invalid_mountpoint = $self->execute_named( <<'SQL' );
+        select entry_id
+             , filename
+             , 'Empty mountpoint, run fix-mountpoint' as reason
+          from filesystem_entry
+        where mountpoint is null
+           or mountpoint = ''
+SQL
+    return $invalid_mountpoint
+}
+
 1;
