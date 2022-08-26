@@ -200,6 +200,36 @@ sub skip_fs_entry( $name ) {
     $name !~ /\b(?:(?:\.(git|cvs|config))|__MACOSX|\.DS_Store)$/i
 }
 
+sub update_properties( $info ) {
+    my $last_ts = $info->{last_scanned} // '';
+
+    # How do we find new columns added to basic_direntry_info ?!
+    # Do we specify these all manually?!
+
+    # This would be a kind of plugin system, maybe?!
+    # Also, how will we handle a nested key like media.title ?! ( meaning ->{media}->{title} )
+    state %path_cache;
+    for my $prop (sort keys %file_properties) {
+        $path_cache{ $prop } //= JSON::Path->new( $prop );
+        if( ! defined $path_cache{ $prop }->value($info)) {
+            status( sprintf "% 16s | %s", $prop, $info->{filename});
+            if( $file_properties{$prop}->($info)) {
+                #msg("$info->{filename} - Last scan updated to '$info->{last_scanned}'");
+                $info->{last_scanned} = timestamp;
+            };
+        };
+    };
+
+    # the same for other fields:
+    # If we changed anything, update the database:
+
+    if( $info->{last_scanned} ne $last_ts ) {
+        #msg( sprintf "% 16s | %s", 'update', $file);
+        $info = $store->insert_or_update_direntry($info);
+    }
+    return $info
+}
+
 # Maybe we want to preseed with DB results so that we get unscanned directories
 # first, or empty directories ?!
 scan_tree_bf(
@@ -212,35 +242,9 @@ scan_tree_bf(
             $info = basic_direntry_info($file,$stat,{ entry_type => 'file' });
             $info = $store->insert_or_update_direntry($info);
         };
-        my $last_ts = $info->{last_scanned} // '';
-
-        # How do we find new columns added to basic_direntry_info ?!
-        # Do we specify these all manually?!
-
-        # This would be a kind of plugin system, maybe?!
-        # Also, how will we handle a nested key like media.title ?! ( meaning ->{media}->{title} )
-        state %path_cache;
-        for my $prop (sort keys %file_properties) {
-            $path_cache{ $prop } //= JSON::Path->new( $prop );
-            if( ! defined $path_cache{ $prop }->value($info)) {
-                status( sprintf "% 16s | %s", $prop, $info->{filename});
-                if( $file_properties{$prop}->($info)) {
-                    #msg("$info->{filename} - Last scan updated to '$info->{last_scanned}'");
-                    $info->{last_scanned} = timestamp;
-                };
-            };
-        };
-
-        # the same for other fields:
-        # If we changed anything, update the database:
-
-        if( $info->{last_scanned} ne $last_ts ) {
-            #msg( sprintf "% 16s | %s", 'update', $file);
-            $info = $store->insert_or_update_direntry($info);
-        }
+        $info = update_properties( $info );
 
         # We also want to create a relation here, with our parent directory?!
-
     },
     directory => sub( $directory, $stat ) {
         my $info = $store->find_direntry_by_filename( $directory );
