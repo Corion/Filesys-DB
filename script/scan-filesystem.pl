@@ -196,10 +196,14 @@ our %file_properties = (
     },
 );
 
+sub skip_fs_entry( $name ) {
+    $name !~ /\b(?:(?:\.(git|cvs|config))|__MACOSX|\.DS_Store)$/i
+}
+
 # Maybe we want to preseed with DB results so that we get unscanned directories
 # first, or empty directories ?!
 scan_tree_bf(
-    wanted => sub($ent) { $ent !~ /\b(?:(?:\.(git|cvs|config))|__MACOSX|\.DS_Store)$/i },
+    wanted => \&skip_fs_entry,
     queue => \@ARGV,
     file => sub($file,$stat) {
 
@@ -257,4 +261,6 @@ scan_tree_bf(
 # [ ] add media.duration column
 # [ ] add "ephemeral" or "auxiliary" file/entry type, for thumbnails and other
 #     stuff that is generated of a different source file
-# [ ] ${MOUNT} should be a separate column, "mountpoint"
+# [ ] read mountpoints config from YAML
+# [ ] gradual updater that doesn't scan the filesystem but only scans for
+#     missing properties
