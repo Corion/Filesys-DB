@@ -61,7 +61,26 @@ sub bind_lexicals( $self, $sql, $level, $lexicals ) {
         if( ! exists $parameters{$perl_name}) {
             croak "Missing bind parameter '$perl_name'";
         };
-        $sth->bind_param($name => $parameters{$perl_name}, SQL_VARCHAR)
+        my $type = SQL_VARCHAR;
+
+        # This is a horrible API, but so is using uplevel'ed variables
+        if( my $r = ref $parameters{$perl_name}) {
+            if( $r eq 'SCALAR' ) {
+                $type = SQL_INTEGER;
+                # Clear out old variable binding:
+                my $v = $parameters{$perl_name};
+                delete $parameters{$perl_name};
+                $parameters{$perl_name} = $$v;
+            } elsif( $r eq 'ARRAY' ) {
+                $type = SQL_INTEGER;
+                # Clear out old variable binding:
+                my $v = $parameters{$perl_name};
+                delete $parameters{$perl_name};
+                $parameters{$perl_name} = $v->[0];
+                $type = $v->[1];
+            }
+        }
+        $sth->bind_param($name => $parameters{$perl_name}, $type)
     };
 
     return $sth
