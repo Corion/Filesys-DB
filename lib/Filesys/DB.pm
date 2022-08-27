@@ -107,16 +107,23 @@ sub execute_named {
     );
 };
 
+sub selectall_named_ex($self, %options) {
+    $options{ level } //= 1;
+    my $sth = $self->bind_lexicals( $options{ sth }, $options{ level }+1, $options{ lexicals });
+    $sth->execute;
+    # we also want to lock the hashes we return here, I guess
+    return $sth->fetchall_arrayref({})
+}
+
 sub selectall_named {
     my( $self, $sql ) = splice @_, 0, 2;
 
     my $lex = \@_;
-    my $sth = $self->execute_named_ex(
+    my $sth = $self->selectall_named_ex(
         sth => $sql,
         level => 2,
         lexicals => $lex,
     );
-    return $sth->fetchall_arrayref({})
 }
 
 sub get_mountpoint_alias( $self, $filename ) {
