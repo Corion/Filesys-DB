@@ -226,6 +226,11 @@ SQL
 
 =head2 C<< ->integrity_check >>
 
+  my $problems = $fs->integrity_check()->fetchall_arrayref({});
+  for my $entry (@$problems) {
+      say "$entry->{filename} ($entry->{entry_id}): $entry->{reason}";
+  }
+
 Run some integrity checks on the database.
 
 =cut
