@@ -243,4 +243,23 @@ SQL
     return $invalid_mountpoint
 }
 
+# No prototype since we want to capture the variables passed in:
+sub entries_ex( $self, %options ) {
+    $options{ level } //= 0;
+    $options{ level } += 2;
+    my $where = delete $options{ where };
+    my $entries = $self->execute_named_ex(sql => <<"SQL", %options);
+         select entry_id
+              , entry_json
+           from filesystem_entry
+          where 1=1
+            and ($where)
+SQL
+}
+# No prototype since we want to capture the variables passed in:
+sub entries {
+    my( $self, $where ) = splice @_,0,2;
+    return $self->entries_ex(where => $where, lexicals => \@_, level => 2);
+}
+
 1;
