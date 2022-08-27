@@ -18,6 +18,14 @@ use Carp 'croak';
 use lib '../Weather-MOSMIX/lib';
 with 'MooX::Role::DBIConnection';
 
+our $VERSION = '0.01';
+
+=head1 NAME
+
+Filesys::DB - store and access filesystem metadata in SQLite
+
+=cut
+
 # All mountpoints need to end in "/" or "\\" , except that we don't enforce that yet
 has 'mountpoints' => (
     is => 'ro',

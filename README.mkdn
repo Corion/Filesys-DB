@@ -1,0 +1,18 @@
+
+[![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/Corion/Filesys-DB?branch=master&svg=true)](https://ci.appveyor.com/project/Corion/Filesys-DB)
+[![Windows](https://github.com/Corion/Filesys-DB/workflows/windows/badge.svg)](https://github.com/Corion/Filesys-DB/actions?query=workflow%3Awindows)
+[![MacOS](https://github.com/Corion/Filesys-DB/workflows/macos/badge.svg)](https://github.com/Corion/Filesys-DB/actions?query=workflow%3Amacos)
+[![Linux](https://github.com/Corion/Filesys-DB/workflows/linux/badge.svg)](https://github.com/Corion/Filesys-DB/actions?query=workflow%3Alinux)
+
+# NAME
+
+Filesys::DB - store and access filesystem metadata in SQLite
+
+## `->integrity_check`
+
+    my $problems = $fs->integrity_check()->fetchall_arrayref({});
+    for my $entry (@$problems) {
+        say "$entry->{filename} ($entry->{entry_id}): $entry->{reason}";
+    }
+
+Run some integrity checks on the database.
