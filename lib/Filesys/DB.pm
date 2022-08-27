@@ -193,6 +193,7 @@ SQL
 # here, we take the path as primary key:
 sub find_direntry_by_filename( $self, $filename ) {
     (my($mountpoint), $filename) = $self->to_alias($filename);
+    die unless $mountpoint;
 
     # All filenames will be UTF-8 encoded, as they live in a JSON blob,
     # no matter their original encoding:
