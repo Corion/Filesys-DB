@@ -230,6 +230,29 @@ sub update_properties( $info ) {
     return $info
 }
 
+sub scan_tree_db( %options ) {
+    $options{ level } //= 0;
+    $options{ level } += 1;
+    my @entries = $store->entries_ex(%options);
+    scan_entries(
+        file => $options{ file },
+        dir  => $options{ dir },
+        entries => \@entries,
+        # wanted has already happened
+        # queue does not exist
+    )
+}
+
+sub scan_entries( %options ) {
+    for my $entry (@{$options{entries}}) {
+        if( $entry->{entry_type} eq 'file' ) {
+            $options{ file }->( $entry, undef );
+        } elsif( $entry->{entry_type} eq 'directory' ) {
+            $options{ dir }->( $entry, undef );
+        }
+    }
+}
+
 # Maybe we want to preseed with DB results so that we get unscanned directories
 # first, or empty directories ?!
 scan_tree_bf(
@@ -259,7 +282,16 @@ scan_tree_bf(
     },
 );
 
-# The query backend should become a separate script, later on
+scan_tree_db(
+    file => sub( $info, $stat ) {
+        # do a liveness check
+        # potentially delete the file entry
+        $info = update_properties( $info );
+    },
+    directory => sub( $info, $stat ) {
+        return 1
+    }
+);
 
 # [ ] add "ephemeral" or "auxiliary" file/entry type, for thumbnails and other
 #     stuff that is generated of a different source file
