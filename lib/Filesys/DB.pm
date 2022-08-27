@@ -34,6 +34,15 @@ around BUILDARGS => sub ($orig, $class, @args) {
 
 # This should go into a separate DBIx role, likely
 sub bind_lexicals( $self, $sql, $level, $lexicals ) {
+    my $sth;
+    if( ref $sql ) {
+        $sth = $sql;
+    } else {
+        my $dbh = $self->dbh;
+        $sth = $dbh->prepare($sql);
+    };
+    return $sth unless $lexicals;
+
     # Gather the names of the variables used in the routine calling us
     my %parameters = map {
         if( ! var_name($level, \$_)) {
@@ -47,13 +56,6 @@ sub bind_lexicals( $self, $sql, $level, $lexicals ) {
         var_name($level, \$_) => $_
     } @$lexicals;
 
-    my $sth;
-    if( ref $sql ) {
-        $sth = $sql;
-    } else {
-        my $dbh = $self->dbh;
-        $sth = $dbh->prepare($sql);
-    };
     my $parameter_names = $sth->{ParamValues};
 
     while (my ($name,$value) = each %$parameter_names) {
