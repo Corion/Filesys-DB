@@ -18,6 +18,7 @@ use Carp 'croak';
 use lib '../Weather-MOSMIX/lib';
 with 'MooX::Role::DBIConnection';
 
+# All mountpoints need to end in "/" or "\\" , except that we don't enforce that yet
 has 'mountpoints' => (
     is => 'ro',
     default => sub { {} },
@@ -128,7 +129,7 @@ sub get_mountpoint_alias( $self, $filename ) {
 
 sub to_alias( $self, $filename ) {
     my ($mp,$alias) = $self->get_mountpoint_alias( $filename );
-    $filename =~ s!^\Q$mp[\\/]\E!!;
+    $filename =~ s!^\Q$mp\E[\\/]!!;
     return ($alias,$filename)
 }
 
@@ -138,7 +139,6 @@ sub to_local( $self, $mountpoint, $filename ) {
     if( ! exists $self->mountpoints->{ $mountpoint }) {
         croak "Unknown mountpoint '$mountpoint'";
     }
-
     return $self->mountpoints->{ $mountpoint } . $filename;
 }
 
