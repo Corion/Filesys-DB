@@ -190,6 +190,17 @@ SQL
     return $info
 }
 
+sub _inflate_entry( $self, $entry ) {
+    my $res = decode_json( $entry->{entry_json} );
+    # The filename comes back as an UTF-8 string, but we want to
+    # get at the original octets that we originally stored:
+    $res->{filename} = decode( 'UTF-8', $res->{filename}); # really?!
+    _utf8_off($res->{filename}); # a filename is octets, not UTF-8
+    $res->{filename} = $self->to_local($res->{mountpoint}, $res->{filename});
+    $res->{entry_id} = $entry->{entry_id};
+    return $res
+}
+
 # here, we take the path as primary key:
 sub find_direntry_by_filename( $self, $filename ) {
     (my($mountpoint), $filename) = $self->to_alias($filename);
@@ -208,13 +219,7 @@ sub find_direntry_by_filename( $self, $filename ) {
 SQL
     my $res;
     if( @$entry ) {
-        $res = decode_json( $entry->[0]->{entry_json} );
-        # The filename comes back as an UTF-8 string, but we want to
-        # get at the original octets that we originally stored:
-        $res->{filename} = decode( 'UTF-8', $res->{filename}); # really?!
-        _utf8_off($res->{filename}); # a filename is octets, not UTF-8
-        $res->{filename} = $self->to_local($res->{mountpoint}, $res->{filename});
-        $res->{entry_id} = $entry->[0]->{entry_id};
+        $res = $self->_inflate_entry( $entry->[0] );
     };
     return $res
 }
