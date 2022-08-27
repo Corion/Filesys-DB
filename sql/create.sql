@@ -28,6 +28,7 @@ create table filesystem_entry (
       -- also we should have metadata like "last updated" etc?
       -- or do we want all of this in another table?!
     , title        generated always as (json_extract(entry_json, '$.content.title'))
+    , duration     generated always as (json_extract(entry_json, '$.content.duration'))
     , html         generated always as (json_extract(entry_json, '$.content.html'))
     , "text"       generated always as (json_extract(entry_json, '$.content.text'))
     , "language"   generated always as (json_extract(entry_json, '$.content.language'))
