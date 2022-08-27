@@ -197,7 +197,7 @@ our %file_properties = (
 );
 
 sub skip_fs_entry( $name ) {
-    $name !~ /\b(?:(?:\.(git|cvs|config))|__MACOSX|\.DS_Store)$/i
+    $name !~ /\b(?:(?:\.(git|cvs|config))|__MACOSX|\.DS_Store|Thumbs.db)$/i
 }
 
 sub update_properties( $info ) {
