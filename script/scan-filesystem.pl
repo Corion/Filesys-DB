@@ -261,8 +261,6 @@ scan_tree_bf(
 
 # The query backend should become a separate script, later on
 
-# [ ] add content.title column
-# [ ] add media.duration column
 # [ ] add "ephemeral" or "auxiliary" file/entry type, for thumbnails and other
 #     stuff that is generated of a different source file
 # [ ] read mountpoints config from YAML
