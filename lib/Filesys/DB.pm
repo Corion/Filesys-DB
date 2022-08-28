@@ -165,10 +165,12 @@ sub insert_or_update_direntry( $self, $info ) {
     my $local_filename = $info->{filename};
     (my($mountpoint), $info->{filename}) = $self->to_alias( $info->{filename});
     $info->{mountpoint} //= $mountpoint;
-    my $value = encode_json( $info );
 
+    # If we clean out, we need to do so on a copy!
     # Clean out all values that should not be stored:
-    delete @{$info}{ (grep { /^_temp/ } keys %$info) };
+    # delete @{$info}{ (grep { /^_temp/ } keys %$info) };
+
+    my $value = encode_json( $info );
 
     my $res;
     if( defined $info->{entry_id}) {
