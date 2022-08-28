@@ -51,14 +51,7 @@ if( $config_file ) {
     $user_config = LoadFile( $config_file );
 };
 $user_config->{mountpoints} //= {};
-
-# Restructure the config
-for my $mp (keys %{ $user_config->{mountpoints}}) {
-    my $v = $user_config->{mountpoints}->{$mp};
-    $config->{mountpoints}->{ $mp } = $v->{directory};
-}
-
-# We start out by storing information about our music collection
+$config->{mountpoints} = $user_config->{mountpoints};
 
 my $store = Filesys::DB->new(
     mountpoints => {
@@ -312,7 +305,7 @@ sub keep_fs_entry( $name ) {
     }
 
     my ($mp,$fn) = $store->to_alias( $name );
-    my $skip = $user_config->{mountpoints}->{$mp};
+    my $skip = $store->mountpoints->{$mp};
     if( grep { index( $_, $name ) == 0 } @{ $skip->{'skip-index'} || []}) {
         msg("Skipping '$name'");
         return undef
