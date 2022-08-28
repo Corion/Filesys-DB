@@ -196,8 +196,12 @@ our %file_properties = (
     },
 );
 
-sub skip_fs_entry( $name ) {
-    $name !~ /\b(?:(?:\.(git|cvs|config))|__MACOSX|\.DS_Store|Thumbs.db)$/i
+sub keep_fs_entry( $name ) {
+    if( $name =~ m![/\\](?:(?:\.(git|cvs|config|DS_Store))|__MACOSX|Thumbs.db)\z!i) {
+        msg("Skipping '$name'");
+        return undef
+    }
+    1
 }
 
 sub update_properties( $info ) {
@@ -256,7 +260,7 @@ sub scan_entries( %options ) {
 # Maybe we want to preseed with DB results so that we get unscanned directories
 # first, or empty directories ?!
 scan_tree_bf(
-    wanted => \&skip_fs_entry,
+    wanted => \&keep_fs_entry,
     queue => \@ARGV,
     file => sub($file,$stat) {
 
