@@ -142,29 +142,46 @@ sub get_mountpoint_alias( $self, $filename ) {
             return ($mp->{$alias}, $alias)
         }
     }
-    croak "Don't know how/where to store '$filename', no mountpoint found.";
+    croak "Don't know how/where to store '$filename', no mountpoint found for that directory.";
 }
 
 sub to_alias( $self, $filename ) {
     my ($mp,$alias) = $self->get_mountpoint_alias( $filename );
-    $filename =~ s!^\Q$mp\E[\\/]!!;
+    #$filename =~ s!^\Q$mp\E[\\/]!!
+    #    or die "Could't strip mountpoint prefix '$mp' from $filename";
+    substr($filename, 0, length($mp)+1) = '';
     return ($alias,$filename)
 }
 
 sub to_local( $self, $mountpoint, $filename ) {
     my $mp = $self->mountpoints;
-
     if( ! exists $self->mountpoints->{ $mountpoint }) {
         croak "Unknown mountpoint '$mountpoint'";
     }
-    return $self->mountpoints->{ $mountpoint } . $filename;
+    # XXX make this FS dependent, don't blindly use '/'
+    # XXX Also, don't assume that mountpoints are in UTF-8 (but that's what YAML gives us)
+    return encode('UTF-8', $self->mountpoints->{ $mountpoint }) . '/' . $filename;
 }
 
 # here, we take the path as primary key:
 sub insert_or_update_direntry( $self, $info ) {
     my $local_filename = $info->{filename};
     (my($mountpoint), $info->{filename}) = $self->to_alias( $info->{filename});
+
     $info->{mountpoint} //= $mountpoint;
+
+    # Sanity check - we don't want to store anything looking like an
+    # absolute filename
+    if( $local_filename eq $info->{filename}) {
+        if( $mountpoint ) {
+            croak "Can't store absolute filename '$local_filename', didn't remove the mountpoint '$mountpoint' " . $self->mountpoints->{$mountpoint};
+        } else {
+            croak "Can't store absolute filename '$local_filename', didn't find/resolve the mountpoint";
+        }
+    }
+    if( $info->{filename} =~ m!^/!) {
+        croak "Can't store absolute filename '$info->{filename}'";
+    }
 
     # If we clean out, we need to do so on a copy!
     # Clean out all values that should not be stored:
@@ -180,7 +197,7 @@ sub insert_or_update_direntry( $self, $info ) {
             values (:entry_id, :value)
             on conflict(entry_id) do
             update set entry_json = :value
-            returning entry_id
+            returning entry_id, filename
 SQL
         $res = $tmp_res->{entry_id};
 
@@ -191,7 +208,7 @@ SQL
             values (:value)
             on conflict(mountpoint,filename) do
             update set entry_json = :value
-            returning entry_id
+            returning entry_id, filename
 SQL
         $res = $tmp_res->[0]->{entry_id};
     };
@@ -202,6 +219,7 @@ SQL
 
 sub _inflate_entry( $self, $entry ) {
     my $res = decode_json( $entry->{entry_json} );
+
     # The filename comes back as an UTF-8 string, but we want to
     # get at the original octets that we originally stored:
     _utf8_off($res->{filename}); # a filename is octets, not UTF-8
@@ -216,7 +234,6 @@ sub _inflate_entry( $self, $entry ) {
 # here, we take the path as primary key:
 sub find_direntry_by_filename( $self, $filename ) {
     (my($mountpoint), $filename) = $self->to_alias($filename);
-    die unless $mountpoint;
 
     # All filenames will be UTF-8 encoded, as they live in a JSON blob,
     # no matter their original encoding:
