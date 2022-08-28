@@ -367,17 +367,17 @@ scan_tree_bf(
     },
 );
 
-scan_tree_db(
-    file => sub( $info, $stat ) {
-        # do a liveness check
-        # potentially delete the file entry
-        $info = update_properties( $info );
-    },
-    directory => sub( $info, $stat ) {
-        return 1
-    },
-    where => '1=1'
-);
+#scan_tree_db(
+#    file => sub( $info, $stat ) {
+#        # do a liveness check
+#        # potentially delete the file entry
+#        $info = update_properties( $info );
+#    },
+#    directory => sub( $info, $stat ) {
+#        return 1
+#    },
+#    where => '1=1'
+#);
 
 # [ ] add "ephemeral" or "auxiliary" file/entry type, for thumbnails and other
 #     stuff that is generated of a different source file
