@@ -37,6 +37,16 @@ around BUILDARGS => sub ($orig, $class, @args) {
     $args->{ dbh } //= {};
     $args->{ dbh }->{dsn} //= 'dbi:SQLite:dbname=db/filesys-db.sqlite';
     $args->{ dbh }->{options} //= { RaiseError => 1, PrintError => 0 };
+
+    if( $args->{mountpoints}) {
+        for my $mp (keys %{ $args->{mountpoints}}) {
+            if( ! ref $args->{mountpoints}->{$mp} ) {
+                $args->{mountpoints}->{$mp} = +{ directory => $args->{mountpoints}->{$mp} };
+            };
+            # Backfill the alias into the structure
+            $args->{mountpoints}->{$mp}->{alias} = $mp;
+        }
+    }
     return $class->$orig($args)
 };
 
@@ -137,11 +147,13 @@ sub selectall_named {
 sub get_mountpoint_alias( $self, $filename ) {
     my $longest;
     my $mp = $self->mountpoints;
-    for my $alias (sort { length $mp->{$b} <=> length $mp->{$a} || $a cmp $b } keys %$mp) {
-        if( index( $filename, $mp->{$alias} ) == 0 ) {
-            return ($mp->{$alias}, $alias)
+    for my $alias (sort {    length $mp->{$b}->{directory} <=> length $mp->{$a}->{directory}
+                          || $a cmp $b # do we really want to compare the names here?!
+                        } keys %$mp) {
+        if( index( $filename, $mp->{$alias}->{directory} ) == 0 ) {
+            return ($mp->{$alias}->{directory}, $alias)
         }
-    }
+    };
     croak "Don't know how/where to store '$filename', no mountpoint found for that directory.";
 }
 
@@ -160,7 +172,7 @@ sub to_local( $self, $mountpoint, $filename ) {
     }
     # XXX make this FS dependent, don't blindly use '/'
     # XXX Also, don't assume that mountpoints are in UTF-8 (but that's what YAML gives us)
-    return encode('UTF-8', $self->mountpoints->{ $mountpoint }) . '/' . $filename;
+    return encode('UTF-8', $self->mountpoints->{ $mountpoint }->{directory}) . '/' . $filename;
 }
 
 # here, we take the path as primary key:
@@ -174,7 +186,7 @@ sub insert_or_update_direntry( $self, $info ) {
     # absolute filename
     if( $local_filename eq $info->{filename}) {
         if( $mountpoint ) {
-            croak "Can't store absolute filename '$local_filename', didn't remove the mountpoint '$mountpoint' " . $self->mountpoints->{$mountpoint};
+            croak "Can't store absolute filename '$local_filename', didn't remove the mountpoint '$mountpoint' " . $self->mountpoints->{$mountpoint}->{directory};
         } else {
             croak "Can't store absolute filename '$local_filename', didn't find/resolve the mountpoint";
         }
