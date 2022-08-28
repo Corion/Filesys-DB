@@ -243,6 +243,12 @@ sub _inflate_entry( $self, $entry ) {
     return $res
 }
 
+sub _inflate_sth( $self, $sth ) {
+    return map {
+        $self->_inflate_entry( $_ );
+    } @{ $sth->fetchall_arrayref( {} )}
+}
+
 # here, we take the path as primary key:
 sub find_direntry_by_filename( $self, $filename ) {
     (my($mountpoint), $filename) = $self->to_alias($filename);
@@ -258,11 +264,8 @@ sub find_direntry_by_filename( $self, $filename ) {
         where filename = :filename
           and mountpoint = :mountpoint
 SQL
-    my $res;
-    if( @$entry ) {
-        $res = $self->_inflate_entry( $entry->[0] );
-    };
-    return $res
+    my @res = $self->_inflate_sth( $entry );
+    return $res[0]
 }
 
 =head2 C<< ->integrity_check >>
