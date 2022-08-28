@@ -50,8 +50,9 @@ if( $config_file ) {
 $user_config->{mountpoints} //= {};
 
 # Restructure the config
-for my $mp (@{ $user_config->{mountpoints}}) {
-    $config->{mountpoints}->{ $mp->{alias} } = $mp->{directory};
+for my $mp (keys %{ $user_config->{mountpoints}}) {
+    my $v = $user_config->{mountpoints}->{$mp};
+    $config->{mountpoints}->{ $mp } = $v->{directory};
 }
 
 # We start out by storing information about our music collection
@@ -237,6 +238,14 @@ sub keep_fs_entry( $name ) {
         msg("Skipping '$name'");
         return undef
     }
+
+    my ($mp,$fn) = $store->to_alias( $name );
+    my $skip = $user_config->{mountpoints}->{$mp};
+    if( grep { index( $_, $name ) == 0 } @{ $skip->{'skip-index'} || []}) {
+        msg("Skipping '$name'");
+        return undef
+    }
+
     1
 }
 

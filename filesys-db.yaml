@@ -1,0 +1,7 @@
+mountpoints:
+    '${MOUNT}':
+        directory: '/var/run/user/1000/gvfs/smb-share:server=aliens.local,share=media'
+    '${Dokumente}':
+        directory: '/home/corion/Dokumente'
+        skip-index:
+          - '/home/corion/Dokumente/Mailbackup'
