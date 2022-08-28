@@ -202,7 +202,9 @@ sub _inflate_entry( $self, $entry ) {
     my $res = decode_json( $entry->{entry_json} );
     # The filename comes back as an UTF-8 string, but we want to
     # get at the original octets that we originally stored:
+    _utf8_off($res->{filename}); # a filename is octets, not UTF-8
     $res->{filename} = decode( 'UTF-8', $res->{filename}); # really?!
+    $res->{filename} = encode( 'Latin-1', $res->{filename}); # really?! Convert back to "octets"
     _utf8_off($res->{filename}); # a filename is octets, not UTF-8
     $res->{filename} = $self->to_local($res->{mountpoint}, $res->{filename});
     $res->{entry_id} = $entry->{entry_id};
@@ -260,7 +262,9 @@ SQL
 sub entries_ex( $self, %options ) {
     $options{ level } //= 0;
     $options{ level } += 2;
-    my $where = delete $options{ where };
+
+    my $where = delete $options{ where }
+        or croak "No where clause";
     my $entries = $self->execute_named_ex(sql => <<"SQL", %options);
          select entry_id
               , entry_json
