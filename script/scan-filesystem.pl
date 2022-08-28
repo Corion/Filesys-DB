@@ -5,6 +5,7 @@ use 5.020;
 use Filter::signatures;
 use feature 'signatures';
 no warnings 'experimental::signatures';
+use PerlX::Maybe;
 
 use Filesys::DB;
 use Carp 'croak';
@@ -13,6 +14,7 @@ use POSIX 'strftime';
 use Encode 'encode', 'decode';
 
 use JSON::Path;
+use YAML 'LoadFile';
 
 use File::Basename;
 
@@ -23,16 +25,41 @@ use Music::Tag 'traditional' => 1;
 GetOptions(
     'mountpoint|m=s' => \my $mountpoint,
     'alias|a=s' => \my $mount_alias,
+    'config|f=s' => \my $config_file,
 );
 
-$mount_alias //= '${MOUNT}';
-$mountpoint //= $ARGV[0];
+my $config = {};
+my $user_config = {};
+if(! defined $config_file ) {
+    if ( 'filesys-db.yaml' ) {
+        $config_file = 'filesys-db.yaml';
+    } else {
+        $user_config = {
+            mountpoints => [
+                {
+                  alias => $mount_alias // '${MOUNT}',
+                  directory => $mountpoint //  $ARGV[0],
+                }
+            ],
+        }
+    }
+}
+if( $config_file ) {
+    $user_config = LoadFile( $config_file );
+};
+$user_config->{mountpoints} //= {};
+
+# Restructure the config
+for my $mp (@{ $user_config->{mountpoints}}) {
+    $config->{mountpoints}->{ $mp->{alias} } = $mp->{directory};
+}
 
 # We start out by storing information about our music collection
 
 my $store = Filesys::DB->new(
     mountpoints => {
-        $mount_alias => $mountpoint,
+        %{ $config->{mountpoints} },
+        maybe $mount_alias => $mountpoint,
     },
 );
 # my $dbh = DBI->connect('dbi:SQLite:dbname=db/filesys-db.sqlite', undef, undef, { RaiseError => 1, PrintError => 0 });
