@@ -293,12 +293,14 @@ SQL
 sub entries_ex( $self, %options ) {
     $options{ level } //= 0;
     $options{ level } += 2;
+    $options{ columns } //= [qw[entry_id entry_json]];
+
+    my $columns = join ",", map {qq("$_")} @{ $options{ columns }};
 
     my $where = delete $options{ where }
         or croak "No where clause";
     my $entries = $self->execute_named_ex(sql => <<"SQL", %options);
-         select entry_id
-              , entry_json
+         select $columns
            from filesystem_entry
           where 1=1
             and ($where)
@@ -306,8 +308,8 @@ SQL
 }
 # No prototype since we want to capture the variables passed in:
 sub entries {
-    my( $self, $where ) = splice @_,0,2;
-    return $self->entries_ex(where => $where, lexicals => \@_, level => 2);
+    my( $self, $columns, $where ) = splice @_,0,3;
+    return $self->entries_ex(columns => $columns, where => $where, lexicals => \@_, level => 2);
 }
 
 1;
