@@ -1,0 +1,42 @@
+---
+abstract: 'store and access filesystem metadata in SQLite'
+author:
+  - 'Max Maischein <corion@cpan.org>'
+build_requires:
+  Data::Dumper: '0'
+  ExtUtils::MakeMaker: '0'
+  Test::Deep: '0'
+  Test::More: '0'
+configure_requires:
+  ExtUtils::MakeMaker: '0'
+dynamic_config: 0
+generated_by: 'ExtUtils::MakeMaker version 7.44, CPAN::Meta::Converter version 2.150010'
+license: perl
+meta-spec:
+  url: http://module-build.sourceforge.net/META-spec-v1.4.html
+  version: '1.4'
+name: Filesys-DB
+no_index:
+  directory:
+    - t
+    - inc
+requires:
+  Carp: '0'
+  DBD::SQLite: 1.71_01
+  DBIx::RunSQL: '0'
+  Encode: '0'
+  File::Spec: '0'
+  Filter::signatures: '0.09'
+  Getopt::Long: '0'
+  JSON: '0'
+  Moo: '2'
+  POSIX: '0'
+  PadWalker: '0'
+  perl: '5.020'
+resources:
+  bugtracker: https://github.com/Corion/Filesys-DB/issues
+  license: https://dev.perl.org/licenses/
+  repository: git://github.com/Corion/Filesys-DB.git
+version: '0.01'
+x_serialization_backend: 'CPAN::Meta::YAML version 0.018'
+x_static_install: 1
