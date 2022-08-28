@@ -22,6 +22,9 @@ use Digest::SHA;
 use MIME::Detect;
 use Music::Tag 'traditional' => 1;
 
+use lib '../Apache-Tika-Async/lib';
+use Apache::Tika::Server;
+
 GetOptions(
     'mountpoint|m=s' => \my $mountpoint,
     'alias|a=s' => \my $mount_alias,
@@ -228,6 +231,25 @@ our %file_properties = (
             $res;
         }
     },
+    '$.content.html' => sub( $info ) {
+        if( $info->{mime_type} =~ m!^application/pdf! ) {
+            my $filename = $info->{filename};
+
+            state $tika //= do {
+                my $t = Apache::Tika::Server->new(
+                    jarfile => '/home/corion/Projekte/Apache-Tika-Async/jar/tika-server-standard-2.3.0.jar',
+                );
+                $t->launch;
+                $t
+            };
+            my $pdf_info = $tika->get_all( $filename );
+            if( $pdf_info->meta->{'meta:language'} =~ /^(de|en|fr|zh)$/ ) {
+                # I don't expect other languages, except for misdetections
+                $info->{language} = $pdf_info->meta->{'meta:language'};
+            }
+            $info->{title} = $pdf_info->meta->{'dc:title'};
+            $info->{content}->{html} = $pdf_info->content();
+
             1;
         }
     },
