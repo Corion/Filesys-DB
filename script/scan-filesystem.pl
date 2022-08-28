@@ -27,8 +27,9 @@ use Apache::Tika::Server;
 
 GetOptions(
     'mountpoint|m=s' => \my $mountpoint,
-    'alias|a=s' => \my $mount_alias,
-    'config|f=s' => \my $config_file,
+    'alias|a=s'      => \my $mount_alias,
+    'config|c=s'     => \my $config_file,
+    'rescan|r'       => \my $rescan,
 );
 
 my $config = {};
@@ -59,7 +60,6 @@ my $store = Filesys::DB->new(
         maybe $mount_alias => $mountpoint,
     },
 );
-# my $dbh = DBI->connect('dbi:SQLite:dbname=db/filesys-db.sqlite', undef, undef, { RaiseError => 1, PrintError => 0 });
 
 # We want a breadth-first FS scan, preferring the most recent entries
 # over older entries (as we assume that old entries don't change much)
@@ -346,7 +346,7 @@ sub update_properties( $info, %options ) {
 sub scan_tree_db( %options ) {
     $options{ level } //= 0;
     $options{ level } += 1;
-    my @entries = $store->entries_ex(%options);
+    my @entries = $store->_inflate_sth( $store->entries_ex(%options));
     scan_entries(
         file => $options{ file },
         dir  => $options{ dir },
@@ -366,46 +366,50 @@ sub scan_entries( %options ) {
     }
 }
 
-# Maybe we want to preseed with DB results so that we get unscanned directories
-# first, or empty directories ?!
-scan_tree_bf(
-    wanted => \&keep_fs_entry,
-    queue => \@ARGV,
-    file => sub($file,$stat) {
+if( ! $rescan) {
+    # Maybe we want to preseed with DB results so that we get unscanned directories
+    # first, or empty directories ?!
+    scan_tree_bf(
+        wanted => \&keep_fs_entry,
+        queue => \@ARGV,
+        file => sub($file,$stat) {
 
-        my $info = $store->find_direntry_by_filename( $file );
-        if( ! $info) {
-            $info = basic_direntry_info($file,$stat,{ entry_type => 'file' });
-            $info = $store->insert_or_update_direntry($info);
-        };
-        $info = update_properties( $info );
+            my $info = $store->find_direntry_by_filename( $file );
+            if( ! $info) {
+                $info = basic_direntry_info($file,$stat,{ entry_type => 'file' });
+                $info = $store->insert_or_update_direntry($info);
+            };
+            $info = update_properties( $info );
 
-        # We also want to create a relation here, with our parent directory?!
-    },
-    directory => sub( $directory, $stat ) {
-        my $info = $store->find_direntry_by_filename( $directory );
-        if( ! $info ) {
-            $info = basic_direntry_info($directory,$stat,{ entry_type => 'directory' });
-            #status( "-- %s (%d)", $directory, insert_or_update_direntry($info)->{entry_id} );
-            $info = $store->insert_or_update_direntry($info);
-        };
+            # We also want to create a relation here, with our parent directory?!
+        },
+        directory => sub( $directory, $stat ) {
+            my $info = $store->find_direntry_by_filename( $directory );
+            if( ! $info ) {
+                $info = basic_direntry_info($directory,$stat,{ entry_type => 'directory' });
+                #status( "-- %s (%d)", $directory, insert_or_update_direntry($info)->{entry_id} );
+                $info = $store->insert_or_update_direntry($info);
+            };
 
-        status( sprintf "% 16s | %s", 'scan', $directory);
-        return 1
-    },
-);
-
-#scan_tree_db(
-#    file => sub( $info, $stat ) {
-#        # do a liveness check
-#        # potentially delete the file entry
-#        $info = update_properties( $info );
-#    },
-#    directory => sub( $info, $stat ) {
-#        return 1
-#    },
-#    where => '1=1'
-#);
+            status( sprintf "% 16s | %s", 'scan', $directory);
+            return 1
+        },
+    );
+} else {
+    my $where = join " ", @ARGV;
+    status( sprintf "% 16s | %s", 'rescan', $where);
+    scan_tree_db(
+        file => sub( $info, $stat ) {
+            # do a liveness check? and potentially delete the file entry
+            # also, have a dry-run option, just listing the files out of date?!
+            $info = update_properties( $info, force => 1 );
+        },
+        directory => sub( $info, $stat ) {
+            return 1
+        },
+        where => $where,
+    );
+}
 
 # [ ] add "ephemeral" or "auxiliary" file/entry type, for thumbnails and other
 #     stuff that is generated of a different source file
