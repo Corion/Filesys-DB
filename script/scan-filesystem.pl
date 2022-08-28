@@ -184,22 +184,89 @@ sub audio_info( $audiofile, $artist=undef, $album=undef ) {
     return \%info;
 }
 
+sub _mime_match( $pattern, $type ) {
+    my $p = $pattern =~ s/\*/.*/r;
+    return $type =~ qr!\A$p\z!
+}
 
 # This is the first set of property handlers
 # This should/could be restructured to mime_type -> field maybe?!
 # Or field -> mime_type ?
 # We can recognize this and recursively descend?!
 
-sub collect_properties( $props, $info ) {
-    for my $prop (sort keys %$props) {
-        if( $prop =~ m!^$! ) {
-            # JSON path
-            # Check that it is missing or we are rebuilding
-        } elsif( $prop =~ m!^[-*\w]+/[-*\w]\z! ) {
-            # MIME type
-            # Check that it applies (or is empty?!)
+sub _applicable_properties( $props, $info, $options, $visual='???' ) {
+    state %path_cache;
+    my @res;
+    if( ref $props eq 'HASH' ) {
+        for my $prop (sort keys %$props) {
+            if( $prop =~ m!^\$! ) {
+                my $vis;
+                if(  $prop =~ m!\.([^.]+)$! ) {
+                    $vis = $1
+                };
+
+                # JSON path
+                # Check that it is missing or we are rebuilding
+                $path_cache{ $prop } //= JSON::Path->new( $prop );
+                my $do_update = $options->{ force }
+                            || ! defined $path_cache{ $prop }->value($info);
+                if( $do_update ) {
+                    push @res, _applicable_properties( $props->{$prop}, $info, $options, $vis );
+                }
+
+            } elsif( $prop =~ m!^[-*\w]+/[-*\w]+\z! ) {
+                # MIME type
+                # Check that it applies (or is empty?!)
+                if( _mime_match( $prop, $info->{mime_type} )) {
+                    push @res, _applicable_properties( $props->{$prop}, $info, $options, $visual );
+                }
+            } else {
+                croak "Unknown property spec '$prop'";
+            }
         }
+    } elsif ( ref $props eq 'CODE' ) {
+        push @res, [$visual, $props]
+    } else {
+        croak "Unknown property spec '$props'";
     }
+    return @res
+}
+
+sub extract_content_via_tika( $info ) {
+    my $filename = $info->{filename};
+
+    state $tika //= do {
+        my $t = Apache::Tika::Server->new(
+            jarfile => '/home/corion/Projekte/Apache-Tika-Async/jar/tika-server-standard-2.3.0.jar',
+        );
+        $t->launch;
+        $t
+    };
+    my $pdf_info = $tika->get_all( $filename );
+    if( $pdf_info->meta->{'meta:language'} =~ /^(de|en|fr|zh)$/ ) {
+        # I don't expect other languages, except for misdetections
+        $info->{language} = $pdf_info->meta->{'meta:language'};
+    }
+    $info->{content}->{title} = $pdf_info->meta->{'dc:title'};
+    $info->{content}->{html} = $pdf_info->content();
+
+    return 1;
+}
+
+sub extract_content_via_audio_tag( $info ) {
+    return if $info->{mime_type} eq 'audio/x-mpegurl';
+    return if $info->{mime_type} eq 'audio/x-scpls';
+
+    my $res;
+
+    my $audio_info = audio_info( $info->{filename} );
+    for( qw(title artist album track duration)) {
+        if( ! defined $info->{content}->{$_}) {
+            $info->{content}->{$_} = $audio_info->{$_};
+            $res = 1;
+        }
+    };
+    $res;
 }
 
 our %file_properties = (
@@ -228,44 +295,13 @@ our %file_properties = (
             }
         }
     },
-    '$.content.title' => sub( $info ) {
-        if( $info->{mime_type} =~ m!^audio/! ) {
-            return if $info->{mime_type} eq 'audio/x-mpegurl';
-            return if $info->{mime_type} eq 'audio/x-scpls';
-
-            my $res;
-
-            my $audio_info = audio_info( $info->{filename} );
-            for( qw(title artist album track duration)) {
-                if( ! defined $info->{content}->{$_}) {
-                    $info->{content}->{$_} = $audio_info->{$_};
-                    $res = 1;
-                }
-            };
-            $res;
-        }
+    '$.content.title' => {
+        'audio/*' => \&extract_content_via_audio_tag,
     },
-    '$.content.html' => sub( $info ) {
-        if( $info->{mime_type} =~ m!^application/pdf! ) {
-            my $filename = $info->{filename};
-
-            state $tika //= do {
-                my $t = Apache::Tika::Server->new(
-                    jarfile => '/home/corion/Projekte/Apache-Tika-Async/jar/tika-server-standard-2.3.0.jar',
-                );
-                $t->launch;
-                $t
-            };
-            my $pdf_info = $tika->get_all( $filename );
-            if( $pdf_info->meta->{'meta:language'} =~ /^(de|en|fr|zh)$/ ) {
-                # I don't expect other languages, except for misdetections
-                $info->{language} = $pdf_info->meta->{'meta:language'};
-            }
-            $info->{content}->{title} = $pdf_info->meta->{'dc:title'};
-            $info->{content}->{html} = $pdf_info->content();
-
-            1;
-        }
+    'application/pdf' => {
+        # Arrayref here, so we only make a single call?!
+        '$.content.title' => \&extract_content_via_tika,
+        '$.content.html'  => \&extract_content_via_tika,
     },
 );
 
@@ -285,7 +321,7 @@ sub keep_fs_entry( $name ) {
     1
 }
 
-sub update_properties( $info ) {
+sub update_properties( $info, %options ) {
     my $last_ts = $info->{last_scanned} // '';
 
     # How do we find new columns added to basic_direntry_info ?!
@@ -293,15 +329,14 @@ sub update_properties( $info ) {
 
     # This would be a kind of plugin system, maybe?!
     # Also, how will we handle a nested key like media.title ?! ( meaning ->{media}->{title} )
-    state %path_cache;
-    for my $prop (sort keys %file_properties) {
-        $path_cache{ $prop } //= JSON::Path->new( $prop );
-        if( ! defined $path_cache{ $prop }->value($info)) {
-            status( sprintf "% 16s | %s", $prop, $info->{filename});
-            if( $file_properties{$prop}->($info)) {
-                #msg("$info->{filename} - Last scan updated to '$info->{last_scanned}'");
-                $info->{last_scanned} = timestamp;
-            };
+    #state %path_cache;
+    #for my $prop (sort keys %file_properties) {
+    my @updaters = _applicable_properties( \%file_properties, $info, \%options );
+    for my $up (@updaters) {
+        my( $vis, $cb ) = @$up;
+        status( sprintf "% 16s | %s", $vis, $info->{filename});
+        if( $cb->($info)) {
+            $info->{last_scanned} = timestamp;
         };
     };
 
