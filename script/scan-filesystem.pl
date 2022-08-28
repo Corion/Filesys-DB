@@ -187,10 +187,19 @@ our %file_properties = (
         if( $info->{mime_type} =~ m!^audio/! ) {
             return if $info->{mime_type} eq 'audio/x-mpegurl';
             return if $info->{mime_type} eq 'audio/x-scpls';
+
+            my $res;
+
             my $audio_info = audio_info( $info->{filename} );
             for( qw(title artist album track duration)) {
-                $info->{content}->{$_} //= $audio_info->{$_}
+                if( ! defined $info->{content}->{$_}) {
+                    $info->{content}->{$_} = $audio_info->{$_};
+                    $res = 1;
+                }
             };
+            $res;
+        }
+    },
             1;
         }
     },
