@@ -186,10 +186,24 @@ sub audio_info( $audiofile, $artist=undef, $album=undef ) {
 
 
 # This is the first set of property handlers
+# This should/could be restructured to mime_type -> field maybe?!
+# Or field -> mime_type ?
+# We can recognize this and recursively descend?!
+
+sub collect_properties( $props, $info ) {
+    for my $prop (sort keys %$props) {
+        if( $prop =~ m!^$! ) {
+            # JSON path
+            # Check that it is missing or we are rebuilding
+        } elsif( $prop =~ m!^[-*\w]+/[-*\w]\z! ) {
+            # MIME type
+            # Check that it applies (or is empty?!)
+        }
+    }
+}
+
 our %file_properties = (
-    # '$.content.title' ?
     # '$.content.text' ?
-    # '$.content.html' ?
     '$.mountpoint' => sub( $info ) {
         $info->{mountpoint} = $store->get_mountpoint_alias( $info->{filename});
         1
@@ -247,7 +261,7 @@ our %file_properties = (
                 # I don't expect other languages, except for misdetections
                 $info->{language} = $pdf_info->meta->{'meta:language'};
             }
-            $info->{title} = $pdf_info->meta->{'dc:title'};
+            $info->{content}->{title} = $pdf_info->meta->{'dc:title'};
             $info->{content}->{html} = $pdf_info->content();
 
             1;
