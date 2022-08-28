@@ -330,7 +330,8 @@ scan_tree_db(
     },
     directory => sub( $info, $stat ) {
         return 1
-    }
+    },
+    where => '1=1'
 );
 
 # [ ] add "ephemeral" or "auxiliary" file/entry type, for thumbnails and other
