@@ -33,6 +33,7 @@ create table filesystem_entry (
     , "text"       generated always as (json_extract(entry_json, '$.content.text'))
     , "language"   generated always as (json_extract(entry_json, '$.content.language'))
     , thumbnail    generated always as (json_extract(entry_json, '$.preview.thumbnail'))
+    -- add image dimensions too
 );
 create unique index idx_filesystem_entry_entry_id on filesystem_entry (entry_id);
 -- We need this one so we can auto-create new rows for files
