@@ -36,7 +36,12 @@ around BUILDARGS => sub ($orig, $class, @args) {
     my $args = @args == 1 && ref $args[0] ? $args[0] : { @args };
     $args->{ dbh } //= {};
     $args->{ dbh }->{dsn} //= 'dbi:SQLite:dbname=db/filesys-db.sqlite';
-    $args->{ dbh }->{options} //= { RaiseError => 1, PrintError => 0 };
+    $args->{ dbh }->{options} //= {
+        RaiseError => 1,
+        PrintError => 0,
+        # No - we want raw bytes in and out, as we'll do the en/decoding ourselves
+        #sqlite_unicode => 1, #$use_unicode
+    };
 
     if( $args->{mountpoints}) {
         for my $mp (keys %{ $args->{mountpoints}}) {
@@ -230,6 +235,7 @@ SQL
 }
 
 sub _inflate_entry( $self, $entry ) {
+    # Downgrade the string again:
     my $res = decode_json( $entry->{entry_json} );
 
     # The filename comes back as an UTF-8 string, but we want to
