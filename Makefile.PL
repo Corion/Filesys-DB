@@ -50,18 +50,27 @@ my %module = (
     },
 
     PREREQ_PM => {
-        'POSIX'              => 0, # for 'setsid' on POSIXish systems
-        'File::Spec'         => 0,
-        'Getopt::Long'       => 0,
-        'Encode'             => 0,
-        'JSON'               => 0,
+        'POSIX'                => 0, # for 'setsid' on POSIXish systems
+        'File::Spec'           => 0,
+        'Getopt::Long'         => 0,
+        'Encode'               => 0,
+        'File::Basename'       => 0,
+        'JSON'                 => 0,
+        'JSON::Path'           => 0,
+        'YAML'                 => 0,
+        'PerlX::Maybe'         => 0,
 
-        'Filter::signatures' => '0.09',
-        'Carp'               => 0,
-        'DBD::SQLite'        => '1.71_01',
-        'DBIx::RunSQL'       => 0,
-        'PadWalker'          => 0,
-        'Moo'                => 2, # for some hashes-as-objects
+        'Filter::signatures'   => '0.09',
+        'Carp'                 => 0,
+        'DBD::SQLite'          => '1.71_01',
+        'DBIx::RunSQL'         => 0,
+        'PadWalker'            => 0,
+        'Moo'                  => 2, # for some hashes-as-objects
+
+        'Digest::SHA'          => 0,
+        'MIME::Detect'         => 0,
+        'Music::Tag'           => 0,
+        'Apache::Tika::Server' => 0,
 
         'Lingua::Stem::Cistem' => 0, # for German
 
