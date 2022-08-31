@@ -19,6 +19,8 @@ GetOptions(
     'config|f=s' => \my $config_file,
 );
 
+my $search = join " ", @ARGV;
+
 my $console_output=1;
 
 my $config = {};
@@ -111,18 +113,17 @@ $store->dbh->do(<<"") or die DBI::errstr;
 # This should happen in create.sql ...
 $store->dbh->do(<<"") or die DBI::errstr;
   CREATE VIRTUAL TABLE filesystem_entry_fts5
-        USING fts5(content, entry_id UNINDEXED, tokenize="perl 'main::locale_tika_tokenizer'")
+        USING fts5(content, title, entry_id UNINDEXED, tokenize="perl 'main::locale_tika_tokenizer'")
 
-for my $doc (@docs[0..9]) {
+for my $doc (@docs) {
     my( $entry_id) = $doc->{ 'entry_id' };
     my( $html) = $doc->{ content }->{ html };
-    my $tmp_res = $store->selectall_named(<<'', $entry_id, $html )->[0];
-        INSERT INTO filesystem_entry_fts5(content, entry_id)
-             VALUES(:html, :entry_id)
+    my( $title ) = $doc->{ content }->{ title };
+    my $tmp_res = $store->selectall_named(<<'', $entry_id, $html, $title )->[0];
+        INSERT INTO filesystem_entry_fts5(content, title, entry_id)
+             VALUES(:html, :title, :entry_id)
 
 }
-
-my $search = 'anrechenbar';
 
 sub left_ell($str,$len) {
     #warn $str;
@@ -150,6 +151,7 @@ sub right_ell($str,$len) {
 
 my $tmp_res = $store->selectall_named(<<'', $search);
     SELECT content
+         , title
          , entry_id
          , highlight(filesystem_entry_fts5, 0, '<-mark->', '</-mark->') as snippet
       FROM filesystem_entry_fts5-- (:search)
@@ -167,9 +169,9 @@ for (@$tmp_res) {
     }
 }
 
-my $out = Text::Table->new('entry_id','snippet');
+my $out = Text::Table->new('entry_id','title','snippet');
 $out->load(
-    map { [@{$_}{qw(entry_id snippet)}] } @{ $tmp_res }
+    map { [@{$_}{qw(entry_id title snippet)}] } @{ $tmp_res }
 );
 print $out;
 
