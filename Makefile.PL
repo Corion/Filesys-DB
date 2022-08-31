@@ -63,6 +63,8 @@ my %module = (
         'PadWalker'          => 0,
         'Moo'                => 2, # for some hashes-as-objects
 
+        'Lingua::Stem::Cistem' => 0, # for German
+
     },
     TEST_REQUIRES => {
         'Test::More'   => 0,

@@ -11,11 +11,15 @@ use YAML 'LoadFile';
 use PerlX::Maybe;
 use Text::Table;
 
+use Lingua::Stem::Cistem;
+
 GetOptions(
     'mountpoint|m=s' => \my $mountpoint,
     'alias|a=s' => \my $mount_alias,
     'config|f=s' => \my $config_file,
 );
+
+my $console_output=1;
 
 my $config = {};
 my $user_config = {};
@@ -82,8 +86,19 @@ sub locale_tika_tokenizer { # see also: Search::Tokenizer
             # say sprintf "%s <%s>", $term, substr( $string, $start, $end-$start);
 
             my $flags = 0;
-            #my $flags = FTS5_TOKEN_COLOCATED;
             DBD::SQLite::db::fts5_xToken($ctx,$flags,$term,$start,$end);
+
+            my @collocated = Lingua::Stem::Cistem::stem( $term );
+
+            # also push synonyms here
+
+            $flags = FTS5_TOKEN_COLOCATED;
+            for my $t (@collocated) {
+                if( $t ne $term ) {
+                    DBD::SQLite::db::fts5_xToken($ctx,$flags,$t,$start,$end);
+                }
+            }
+
         }
     }
   };
@@ -107,22 +122,10 @@ for my $doc (@docs[0..9]) {
 
 }
 
-my $search = 'Sonstige anrechenbare';
-#my $like = "%" .$search . "%";
-#my $tmp_res = $store->selectall_named(<<'', $like);
-#    SELECT filename
-#         , html as res_html
-#      FROM filesystem_entry
-#      where html LIKE :like
-#
-#my $out = Text::Table->new('res_html', 'filename');
-#$out->load(
-#    map { [@{$_}{qw(res_html filename)}] } @{ $tmp_res }
-#);
-#print $out;
+my $search = 'anrechenbar';
 
 sub left_ell($str,$len) {
-    warn $str;
+    #warn $str;
     if( length($str) > $len-3 ) {
         $str = '...'.substr( $str, length($str)-$len+3, $len-3 );
     }
@@ -130,7 +133,7 @@ sub left_ell($str,$len) {
 }
 
 sub mid_ell($str,$len) {
-    warn $str;
+    #warn $str;
     if( length($str) > $len-6 ) {
         $str = '...'.substr( $str, length($str)-$len+6, $len-6 ).'...';
     }
@@ -138,13 +141,12 @@ sub mid_ell($str,$len) {
 }
 
 sub right_ell($str,$len) {
-    warn $str;
+    #warn $str;
     if( length($str) > $len-3 ) {
         $str = substr( $str, 0, $len-3 ).'...';
     }
     return $str
 }
-
 
 my $tmp_res = $store->selectall_named(<<'', $search);
     SELECT content
@@ -154,10 +156,15 @@ my $tmp_res = $store->selectall_named(<<'', $search);
       where content MATCH :search
   order by rank
 
+# prepare for output
 for (@$tmp_res) {
     $_->{snippet} =~ s!\A(.*?)<-mark->!left_ell($1,15)."<-mark->"!ems;
     $_->{snippet} =~ s!</-mark->(.*?)<-mark->!mid_ell($1,15)."<-mark->"!gems;
-    $_->{snippet} =~ s!</-mark->(.*?)\z!right_ell($1,15)!ems;
+    $_->{snippet} =~+ s!</-mark->(.*?)\z!right_ell($1,15)!ems;
+
+    if( $console_output ) {
+        $_->{snippet} =~ s!</?-mark->!!g;
+    }
 }
 
 my $out = Text::Table->new('entry_id','snippet');
