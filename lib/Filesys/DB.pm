@@ -306,15 +306,18 @@ sub find_direntry_by_filename( $self, $filename ) {
     # no matter their original encoding:
     $filename = encode('UTF-8', $filename );
 
-    my $entry = $self->selectall_named(<<'SQL', $filename, $mountpoint);
+    my $res = $self->selectall_named(<<'SQL', $filename, $mountpoint);
         select entry_json
              , entry_id
           from filesystem_entry
         where filename = :filename
           and mountpoint = :mountpoint
 SQL
-    my @res = $self->_inflate_sth( $entry );
-    return $res[0]
+
+    if( @$res ) {
+        $res->[0] = $self->_inflate_entry( $res->[0] );
+    }
+    return $res->[0]
 }
 
 =head2 C<< ->integrity_check >>
