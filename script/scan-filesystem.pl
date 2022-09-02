@@ -48,7 +48,7 @@ if(! defined $config_file ) {
         }
     }
 }
-if( $config_file ) {
+if( -f $config_file ) {
     $user_config = LoadFile( $config_file );
 };
 $user_config->{mountpoints} //= {};

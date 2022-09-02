@@ -44,16 +44,59 @@ around BUILDARGS => sub ($orig, $class, @args) {
     };
 
     if( $args->{mountpoints}) {
-        for my $mp (keys %{ $args->{mountpoints}}) {
-            if( ! ref $args->{mountpoints}->{$mp} ) {
-                $args->{mountpoints}->{$mp} = +{ directory => $args->{mountpoints}->{$mp} };
-            };
-            # Backfill the alias into the structure
-            $args->{mountpoints}->{$mp}->{alias} = $mp;
-        }
+        __PACKAGE__->_restructure_mountpoints( $args->{mountpoints});
     }
     return $class->$orig($args)
 };
+
+sub _restructure_mountpoints( $self, $mountpoints ) {
+    for my $mp (keys %{ $mountpoints}) {
+        if( ! ref $mountpoints->{$mp} ) {
+            $mountpoints->{$mp} = +{ directory => $mountpoints->{$mp} };
+        };
+        # Backfill the alias into the structure
+        $mountpoints->{$mp}->{alias} = $mp;
+    }
+}
+
+=head2 C<< ->init_config >>
+
+  $store->init_config(
+      default_config => 'filesys-db.yaml',
+      filename       => $filename_from_ARGV,
+  );
+
+Looks for a config file and a default config file, and initialize from there
+
+=cut
+
+sub init_config( $self, %options ) {
+    my $config = {};
+    my $user_config = {};
+    $options{ config_file } //= $options{ default_config_file };
+    if(! defined $options{ config_file } ) {
+        $user_config = {
+            mountpoints => [
+                {
+                    alias => $options{ mount_alias } // '${MOUNT}',
+                    directory => $options{ mountpoint } //  $ARGV[0],
+                }
+            ],
+        }
+    }
+    if( -f $options{ config_file }) {
+        $user_config = LoadFile( $options{ config_file });
+    };
+    $user_config->{mountpoints} //= {};
+
+    # Should we merge or simply replace?!
+
+    $self->{mountpoints} = $user_config->{mountpoints};
+    if( $options{mountpoints}) {
+        $self->_restructure_mountpoints( $self->{mountpoints});
+    }
+    return ($config, $user_config);
+}
 
 # This should go into a separate DBIx role, likely
 sub bind_lexicals( $self, $sql, $level, $lexicals ) {
