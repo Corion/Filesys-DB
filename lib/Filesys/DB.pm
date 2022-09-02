@@ -358,7 +358,7 @@ sub entries_ex( $self, %options ) {
          select $columns
            from filesystem_entry
           where 1=1
-            and ($where)
+            and $where
 SQL
 }
 # No prototype since we want to capture the variables passed in:

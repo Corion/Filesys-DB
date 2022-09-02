@@ -6,15 +6,27 @@ use Getopt::Long;
 use YAML 'LoadFile';
 use PerlX::Maybe;
 
+our $order_by='';
+our $direction='';
 GetOptions(
     'mountpoint|m=s' => \my $mountpoint,
     'alias|a=s' => \my $mount_alias,
     'config|f=s' => \my $config_file,
     'columns|c=s' => \my @columns,
+
+    # ls options
+    't' => sub { $order_by = 'mtime' },
+    'r' => sub { $direction = 'desc' },
 );
+
+$order_by //= 'entry_id';
 
 @columns = 'filename' unless @columns;
 my $sql = join " ", @ARGV;
+
+if( $order_by ) {
+    $sql .= " order by $order_by $direction";
+}
 
 my $config = {};
 my $user_config = {};
@@ -48,5 +60,5 @@ my $store = Filesys::DB->new(
 );
 
 print DBIx::RunSQL->format_results(
-    sth => $store->entries( \@columns, $sql ),
+    sth => $store->entries( \@columns, $sql),
 );
