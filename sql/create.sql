@@ -54,3 +54,7 @@ create table filesystem_relation (
     , title             generated always as (json_extract(relation_json, '$.title')) -- 'directory', 'album', ???
     , "position"        generated always as (json_extract(relation_json, '$.position')) -- like track number, but management is harder
 );
+
+-- full text search
+CREATE VIRTUAL TABLE filesystem_entry_fts5
+    USING fts5(content, title, "language" UNINDEXED, entry_id UNINDEXED, tokenize="perl 'main::locale_tika_tokenizer'")
