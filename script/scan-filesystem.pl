@@ -299,6 +299,11 @@ our %file_properties = (
     '$.content.title' => {
         'audio/*' => \&extract_content_via_audio_tag,
     },
+    # Arrayref here, so we only make a single call?!
+    'application/vnd.oasis.opendocument.presentation' => {
+        '$.content.title' => \&extract_content_via_tika,
+        '$.content.html'  => \&extract_content_via_tika,
+    },
     'application/pdf' => {
         # Arrayref here, so we only make a single call?!
         '$.content.title' => \&extract_content_via_tika,
