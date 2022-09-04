@@ -214,7 +214,7 @@ sub _applicable_properties( $props, $info, $options, $visual='???' ) {
                     push @res, _applicable_properties( $props->{$prop}, $info, $options, $vis );
                 }
 
-            } elsif( $prop =~ m!^[-*\w]+/[-*\w]+\z! ) {
+            } elsif( $prop =~ m!^[-.*\w]+/[-.*\w]+\z! ) {
                 # MIME type
                 # Check that it applies (or is empty?!)
                 if( _mime_match( $prop, $info->{mime_type} )) {
