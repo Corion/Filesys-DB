@@ -438,7 +438,6 @@ if( ! $rescan) {
 
 # [ ] add "ephemeral" or "auxiliary" file/entry type, for thumbnails and other
 #     stuff that is generated of a different source file
-# [ ] read mountpoints config from YAML
 # [ ] gradual updater that doesn't scan the filesystem but only scans for
 #     missing properties - this is maybe a separate program?
 # [ ] Make the skip list configurable, and/or hide them by a special entry
