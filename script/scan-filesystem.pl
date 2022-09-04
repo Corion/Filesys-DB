@@ -64,6 +64,19 @@ my $store = Filesys::DB->new(
 # We want a breadth-first FS scan, preferring the most recent entries
 # over older entries (as we assume that old entries don't change much)
 
+sub _collect_fs_info( $fn, $parent=undef ) {
+    $fn =~ s![/\\]\z!!; # strip off any directory separator as we'll use our own
+    my $type = -f $fn ? 'file'
+             : -d $fn ? 'directory'
+             : undef;
+    return {
+        type   => $type,
+        stat   => [stat($fn)],
+        parent => $parent,
+        name   => $fn,
+    }
+}
+
 # We currently expect entries from a filesystem, not ftp/webdav/ssh yet
 sub scan_tree_bf( %options ) {
     my $on_file      = delete $options{ file } // sub {};
@@ -71,43 +84,41 @@ sub scan_tree_bf( %options ) {
     my $wanted       = delete $options{ wanted } // sub { 1 };
     my $queue        = delete $options{ queue } // ['.'];
 
-    state %statcache;
-
     if( $queue and ! ref $queue) {
         $queue = [$queue];
     };
 
+    for my $entry (@$queue) {
+        if(! ref $entry ) {
+            $entry = _collect_fs_info( $entry );
+        }
+    }
+
     while (@$queue) {
         my $entry = shift @$queue;
 
-        $entry =~ s![/\\]\z!!; # strip off any directory separator as we'll use our own
-
-        my $stat = $statcache{$entry};
-
-        if( -d $entry ) {
-            my $stat = delete $statcache{ $entry };
-            if( ! $on_directory->($entry, $stat)) {
+        if( $entry->{type} eq 'directory' ) {
+            if( ! $on_directory->($entry->{name}, $entry)) {
                 # we are actually not interested in this directory
                 next;
             };
 
-            opendir my $dh, $entry or croak "$entry: $!";
+            my $dn = $entry->{name};
+            opendir my $dh, $dn or croak "$dn: $!";
             my @entries = map {
-                my $full = "$entry/$_";
-                $statcache{ $full } = [stat($full)];
-                $full
+                my $full = "$dn/$_";
+                _collect_fs_info( $full, $dn )
             } grep {
                     $_ ne '.'
                 and $_ ne '..'
-                and $wanted->("$entry/$_")
+                and $wanted->("$dn/$_")
             } readdir $dh;
 
-            @$queue = sort { $statcache{ $b }->[9] <=> $statcache{ $a }->[9] } @$queue, @entries;
+            @$queue = sort { $b->{stat}->[9] <=> $a->{stat}->[9] } @$queue, @entries;
 
-        } elsif( -f $entry ) {
+        } elsif( $entry->{type} eq 'file' ) {
             # Conserve some memory
-            my $stat = delete $statcache{ $entry };
-            $on_file->($entry, $stat);
+            $on_file->($entry->{name}, $entry);
 
         } else {
             # we skip stuff that is neither a file nor a directory
@@ -115,11 +126,11 @@ sub scan_tree_bf( %options ) {
     }
 };
 
-sub basic_direntry_info( $ent, $stat, $defaults ) {
+sub basic_direntry_info( $ent, $context, $defaults ) {
     return {
         %$defaults,
         filename => $ent,
-        mtime    => $stat->[9],
+        mtime    => $context->{stat}->[9],
         filesize => -s $ent,
     }
 }
@@ -373,21 +384,34 @@ if( ! $rescan) {
     scan_tree_bf(
         wanted => \&keep_fs_entry,
         queue => \@ARGV,
-        file => sub($file,$stat) {
+        file => sub($file,$context) {
 
             my $info = $store->find_direntry_by_filename( $file );
             if( ! $info) {
-                $info = basic_direntry_info($file,$stat,{ entry_type => 'file' });
+                $info = basic_direntry_info($file,$context, { entry_type => 'file' });
                 $info = $store->insert_or_update_direntry($info);
             };
             $info = update_properties( $info );
 
             # We also want to create a relation here, with our parent directory?!
+            # We have that information in context->{parent}
+            if( defined $context->{parent}) {
+                # This should always exist since we scan and create directories
+                # before scanning and creating their contents
+                my $parent = $store->find_direntry_by_filename( $context->{parent});
+
+                my $relation = $store->insert_or_update_relation({
+                    parent_id => $parent->{entry_id},
+                    child_id  => $info->{entry_id},
+                    relation_type => 'directory',
+                });
+            }
+
         },
-        directory => sub( $directory, $stat ) {
+        directory => sub( $directory, $context ) {
             my $info = $store->find_direntry_by_filename( $directory );
             if( ! $info ) {
-                $info = basic_direntry_info($directory,$stat,{ entry_type => 'directory' });
+                $info = basic_direntry_info($directory,$context,{ entry_type => 'directory' });
                 #status( "-- %s (%d)", $directory, insert_or_update_direntry($info)->{entry_id} );
                 $info = $store->insert_or_update_direntry($info);
             };
