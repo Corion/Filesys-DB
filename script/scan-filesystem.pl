@@ -249,6 +249,7 @@ sub extract_content_via_tika( $info ) {
 sub extract_content_via_audio_tag( $info ) {
     return if $info->{mime_type} eq 'audio/x-mpegurl';
     return if $info->{mime_type} eq 'audio/x-scpls';
+    return if $info->{mime_type} eq 'audio/x-wav';
 
     my $res;
 
