@@ -360,8 +360,8 @@ sub scan_tree_db( %options ) {
     $options{ level } += 1;
     my @entries = $store->_inflate_sth( $store->entries_ex(%options));
     scan_entries(
-        file => $options{ file },
-        dir  => $options{ dir },
+        file      => $options{ file },
+        directory => $options{ directory },
         entries => \@entries,
         # wanted has already happened
         # queue does not exist
@@ -373,7 +373,7 @@ sub scan_entries( %options ) {
         if( $entry->{entry_type} eq 'file' ) {
             $options{ file }->( $entry, undef );
         } elsif( $entry->{entry_type} eq 'directory' ) {
-            $options{ dir }->( $entry, undef );
+            $options{ directory }->( $entry, undef );
         }
     }
 }
