@@ -424,12 +424,12 @@ if( ! $rescan) {
     my $where = join " ", @ARGV;
     status( sprintf "% 16s | %s", 'rescan', $where);
     scan_tree_db(
-        file => sub( $info, $stat ) {
+        file => sub( $info, $context ) {
             # do a liveness check? and potentially delete the file entry
             # also, have a dry-run option, just listing the files out of date?!
             $info = update_properties( $info, force => 1 );
         },
-        directory => sub( $info, $stat ) {
+        directory => sub( $info, $context ) {
             return 1
         },
         where => $where,
