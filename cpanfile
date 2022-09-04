@@ -1,4 +1,4 @@
-requires 'POSIX';
+requires 'POSIX' => '>= 0';
 requires 'File::Spec';
 requires 'Getopt::Long';
 requires 'Encode';
@@ -10,7 +10,8 @@ requires 'PerlX::Maybe';
 requires 'Filter::signatures';
 requires 'Carp';
 requires 'DBI';
-requires 'DBD::SQLite' => '>=1.71_06';
+#requires 'DBD::SQLite' => '>= 1.71_06';
+requires 'git://github.com/Corion/DBD-SQLite.git@fts5_support'; # until there is a release with the fts5 support we want
 requires 'DBIx::RunSQL';
 requires 'PadWalker';
 requires 'Moo' => '>= 2';
