@@ -277,6 +277,18 @@ SQL
     return $info
 }
 
+sub insert_or_update_relation( $self, $info ) {
+    my $value = encode_json( $info );
+    my $res = $self->selectall_named(<<'SQL', $value );
+        insert into filesystem_relation (relation_json)
+        values (:value)
+        on conflict(relation_type,parent_id,child_id) do
+        update set relation_json = :value
+        returning relation_id
+SQL
+    $info->{relation_id} = $res;
+}
+
 sub _inflate_entry( $self, $entry ) {
     # Downgrade the string again:
     my $res = decode_json( $entry->{entry_json} );
