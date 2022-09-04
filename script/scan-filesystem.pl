@@ -312,14 +312,14 @@ our %file_properties = (
 
 sub keep_fs_entry( $name ) {
     if( $name =~ m![/\\](?:(?:\.(git|cvs|config|DS_Store))|__MACOSX|Thumbs.db)\z!i) {
-        msg("Skipping '$name'");
+        # msg("Skipping '$name'");
         return undef
     }
 
     my ($mp,$fn) = $store->to_alias( $name );
     my $skip = $store->mountpoints->{$mp};
     if( grep { index( $_, $name ) == 0 } @{ $skip->{'skip-index'} || []}) {
-        msg("Skipping '$name'");
+        # msg("Skipping '$name'");
         return undef
     }
 
