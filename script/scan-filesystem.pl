@@ -193,11 +193,7 @@ sub _mime_match( $pattern, $type ) {
     return $type =~ qr!\A$p\z!
 }
 
-# This is the first set of property handlers
-# This should/could be restructured to mime_type -> field maybe?!
-# Or field -> mime_type ?
-# We can recognize this and recursively descend?!
-
+# This does a recursive descent to find whether rules apply or not
 sub _applicable_properties( $props, $info, $options, $visual='???' ) {
     state %path_cache;
     my @res;
