@@ -18,6 +18,8 @@ my $store = Filesys::DB->new(
     },
 );
 
+sub locale_tika_tokenizer {}
+
 # A filename with a BOM ?!
 my $filename_octets = "y/\x{ef}\x{bb}\x{bf}House Gospel Choir";
 

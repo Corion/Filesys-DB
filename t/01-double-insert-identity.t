@@ -17,6 +17,8 @@ my $store = Filesys::DB->new(
     },
 );
 
+sub locale_tika_tokenizer {}
+
 my $id = $store->insert_or_update_direntry({ filename => 'test' })->{entry_id};
 
 my $new_id = $store->find_direntry_by_filename('test')->{entry_id};
