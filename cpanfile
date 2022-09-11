@@ -1,4 +1,4 @@
-requires 'POSIX' => '>= 0';
+requires 'POSIX' => '== 1.94'; # to allow installation with 5.32 ...
 requires 'File::Spec';
 requires 'Getopt::Long';
 requires 'Encode';
@@ -11,7 +11,7 @@ requires 'Filter::signatures';
 requires 'Carp';
 requires 'DBI';
 #requires 'DBD::SQLite' => '>= 1.71_06';
-requires 'git://github.com/Corion/DBD-SQLite.git@fts5_support'; # until there is a release with the fts5 support we want
+#requires '/home/corion/Projekte/DBD-SQLite/DBD-SQLite-1.71_06.tar.gz'; # until there is a release with the fts5 support we want
 requires 'DBIx::RunSQL';
 requires 'PadWalker';
 requires 'Moo' => '>= 2';
