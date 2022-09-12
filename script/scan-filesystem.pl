@@ -142,14 +142,30 @@ sub timestamp($ts=time) {
 # or we should bring Term::Output::List up to date/onto CPAN
 {
     my $last;
+    my $colcount;
+
+    $SIG{WINCH} = sub {
+        undef $colcount;
+    };
+
+    sub col_trunc($msg) {
+        $colcount //= 0+`tput cols`;
+        my $vis = $msg;
+        if( length($msg) > $colcount ) {
+             $vis = substr( $msg, 0, $colcount-4 ) . '...';
+        }
+        return $vis
+    }
+
     sub status($msg) {
         local $|=1;
         my $rubout = "";
         if( $last ) {
-            $rubout .= "\r" . (" " x length($last)) . "\r";
+            $rubout .= "\r" . col_trunc(" " x length($last)) . "\r";
         };
-        print $rubout.$msg."\r";
-        $last = $msg;
+        my $vis = col_trunc($msg);
+        print $rubout.$vis."\r";
+        $last = $vis;
     }
 
     sub msg($msg) {
