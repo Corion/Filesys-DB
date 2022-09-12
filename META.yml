@@ -21,17 +21,26 @@ no_index:
     - t
     - inc
 requires:
+  Apache::Tika::Server: '0'
   Carp: '0'
   DBD::SQLite: 1.71_01
   DBIx::RunSQL: '0'
+  Digest::SHA: '0'
   Encode: '0'
+  File::Basename: '0'
   File::Spec: '0'
-  Filter::signatures: '0.09'
   Getopt::Long: '0'
   JSON: '0'
+  JSON::Path: '0'
+  Lingua::Stem::Cistem: '0'
+  MIME::Detect: '0'
   Moo: '2'
+  MooX::Role::DBIConnection: '2'
+  Music::Tag: '0'
   POSIX: '0'
   PadWalker: '0'
+  PerlX::Maybe: '0'
+  YAML: '0'
   perl: '5.020'
 resources:
   bugtracker: https://github.com/Corion/Filesys-DB/issues

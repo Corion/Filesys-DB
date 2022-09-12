@@ -60,7 +60,7 @@ my %module = (
         'YAML'                 => 0,
         'PerlX::Maybe'         => 0,
 
-        'Filter::signatures'        => '0.09',
+        # 'Filter::signatures'        => '0.09',
         'Carp'                      => 0,
         'DBD::SQLite'               => '1.71_01',
         'DBIx::RunSQL'              => 0,

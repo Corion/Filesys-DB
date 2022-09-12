@@ -2,7 +2,7 @@
 use strict;
 use 5.020;
 
-use Filter::signatures;
+#use Filter::signatures;
 use feature 'signatures';
 no warnings 'experimental::signatures';
 use PerlX::Maybe;
