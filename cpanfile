@@ -9,12 +9,14 @@ requires 'PerlX::Maybe';
 
 requires 'Filter::signatures';
 requires 'Carp';
-requires 'DBI';
+requires 'DBI' => '== 1.643';
 #requires 'DBD::SQLite' => '>= 1.71_06';
-#requires '/home/corion/Projekte/DBD-SQLite/DBD-SQLite-1.71_06.tar.gz'; # until there is a release with the fts5 support we want
+#requires 'DBD::SQLite';
+#requires $ENV{PWD} . '/../DBD-SQLite'; # until there is a release with the fts5 support we want
 requires 'DBIx::RunSQL';
 requires 'PadWalker';
 requires 'Moo' => '>= 2';
+requires 'MooX::Role::DBIConnection';
 
 requires 'Digest::SHA' => '0';
 requires 'MIME::Detect' => '0';

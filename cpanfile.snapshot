@@ -254,6 +254,25 @@ DISTRIBUTIONS
       overload 0
       strict 0
       warnings 0
+  DBD-SQLite-1.70
+    pathname: I/IS/ISHIGAKI/DBD-SQLite-1.70.tar.gz
+    provides:
+      DBD::SQLite 1.70
+      DBD::SQLite::Constants undef
+      DBD::SQLite::GetInfo undef
+      DBD::SQLite::VirtualTable 1.70
+      DBD::SQLite::VirtualTable::Cursor 1.70
+      DBD::SQLite::VirtualTable::FileContent undef
+      DBD::SQLite::VirtualTable::FileContent::Cursor undef
+      DBD::SQLite::VirtualTable::PerlData undef
+      DBD::SQLite::VirtualTable::PerlData::Cursor undef
+    requirements:
+      DBI 1.57
+      ExtUtils::MakeMaker 0
+      File::Spec 0.82
+      Test::More 0.88
+      Tie::Hash 0
+      perl 5.006
   DBI-1.643
     pathname: T/TI/TIMB/DBI-1.643.tar.gz
     provides:

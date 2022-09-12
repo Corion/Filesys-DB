@@ -8,6 +8,15 @@
 
 Filesys::DB - store and access filesystem metadata in SQLite
 
+## `->init_config`
+
+    $store->init_config(
+        default_config => 'filesys-db.yaml',
+        filename       => $filename_from_ARGV,
+    );
+
+Looks for a config file and a default config file, and initialize from there
+
 ## `->integrity_check`
 
     my $problems = $fs->integrity_check()->fetchall_arrayref({});

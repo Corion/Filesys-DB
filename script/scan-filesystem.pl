@@ -459,3 +459,9 @@ if( ! $rescan) {
 # [ ] Make the skip list configurable, and/or hide them by a special entry
 # [ ] Add handler for YAML and Markdown files, extracting (for example) the title
 #     Also, for anything else containing frontmatter ...
+# [ ] (Video) thumbnail generation? using ffmpeg
+# [ ] Slide/pdf thumbnail generation? using ?!
+# [ ] Randomly revisit entries to check they are up to date. This basically
+#     means finding two relatively prime numbers, one the frequency and one the
+#     maximum expected staleness, and scanning all files with
+#               entry_id % (count/(frequency*staleness)) = time()/frequency

@@ -60,12 +60,13 @@ my %module = (
         'YAML'                 => 0,
         'PerlX::Maybe'         => 0,
 
-        'Filter::signatures'   => '0.09',
-        'Carp'                 => 0,
-        'DBD::SQLite'          => '1.71_01',
-        'DBIx::RunSQL'         => 0,
-        'PadWalker'            => 0,
-        'Moo'                  => 2, # for some hashes-as-objects
+        'Filter::signatures'        => '0.09',
+        'Carp'                      => 0,
+        'DBD::SQLite'               => '1.71_01',
+        'DBIx::RunSQL'              => 0,
+        'PadWalker'                 => 0,
+        'Moo'                       => 2, # for some hashes-as-objects
+        'MooX::Role::DBIConnection' => 2, # for some hashes-as-objects
 
         'Digest::SHA'          => 0,
         'MIME::Detect'         => 0,

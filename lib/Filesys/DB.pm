@@ -15,7 +15,6 @@ use JSON 'encode_json', 'decode_json';
 
 use Carp 'croak';
 
-use lib '../Weather-MOSMIX/lib';
 with 'MooX::Role::DBIConnection';
 
 our $VERSION = '0.01';
