@@ -4,6 +4,7 @@ use Test::More tests => 2;
 
 use DBIx::RunSQL;
 use Filesys::DB;
+use Filesys::DB::FTS::Tokenizer;
 
 my $dbh = DBIx::RunSQL->create(
     sql => 'sql/create.sql',
@@ -16,8 +17,6 @@ my $store = Filesys::DB->new(
         '${TEST_MOUNT}' => '',
     },
 );
-
-sub locale_tika_tokenizer {}
 
 my $id = $store->insert_or_update_direntry({ filename => 'test' })->{entry_id};
 

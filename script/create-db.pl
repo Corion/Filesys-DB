@@ -1,6 +1,7 @@
 #!/usr/bin/perl -w
 use strict;
 use DBIx::RunSQL;
+use Filesys::DB::FTS::Tokenizer; # so that the tokenizer subroutine is found
 
 my $exitcode = DBIx::RunSQL->handle_command_line('filesys-db', \@ARGV);
 exit $exitcode;

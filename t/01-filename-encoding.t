@@ -4,6 +4,7 @@ use Test::More tests => 5;
 
 use DBIx::RunSQL;
 use Filesys::DB;
+use Filesys::DB::FTS::Tokenizer;
 use Encode 'is_utf8';
 
 my $dbh = DBIx::RunSQL->create(
@@ -17,8 +18,6 @@ my $store = Filesys::DB->new(
         '${TEST_MOUNT}' => 'y',
     },
 );
-
-sub locale_tika_tokenizer {}
 
 # A filename with a BOM ?!
 my $filename_octets = "y/\x{ef}\x{bb}\x{bf}House Gospel Choir";

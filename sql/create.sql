@@ -63,4 +63,4 @@ create unique index idx_filesystem_relation_child_parent_id on filesystem_relati
 
 -- full text search
 CREATE VIRTUAL TABLE filesystem_entry_fts5
-    USING fts5(content, title, "language" UNINDEXED, entry_id UNINDEXED, tokenize="perl 'main::locale_tika_tokenizer'")
+    USING fts5(content, title, "language" UNINDEXED, entry_id UNINDEXED, tokenize="perl 'Filesys::DB::FTS::Tokenizer::locale_tika_tokenizer'")
