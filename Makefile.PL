@@ -66,7 +66,7 @@ my %module = (
         'DBIx::RunSQL'              => 0,
         'PadWalker'                 => 0,
         'Moo'                       => 2, # for some hashes-as-objects
-        'MooX::Role::DBIConnection' => 2, # for some hashes-as-objects
+        'MooX::Role::DBIConnection' => '0.04', # DBI connection convenience wrapper
 
         'Digest::SHA'          => 0,
         'MIME::Detect'         => 0,
