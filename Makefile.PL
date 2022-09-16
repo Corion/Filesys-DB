@@ -67,6 +67,7 @@ my %module = (
         'PadWalker'                 => 0,
         'Moo'                       => 2, # for some hashes-as-objects
         'MooX::Role::DBIConnection' => '0.04', # DBI connection convenience wrapper
+        'Text::Table'               => 0,
 
         'Digest::SHA'          => 0,
         'MIME::Detect'         => 0,

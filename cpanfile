@@ -17,6 +17,7 @@ requires 'DBIx::RunSQL';
 requires 'PadWalker';
 requires 'Moo' => '>= 2';
 requires 'MooX::Role::DBIConnection';
+requires 'Text::Table';
 
 requires 'Digest::SHA' => '0';
 requires 'MIME::Detect' => '0';
