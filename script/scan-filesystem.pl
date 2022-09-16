@@ -70,6 +70,19 @@ sub _collect_fs_info( $fn, $parent=undef ) {
     }
 }
 
+sub is_win32_reparse($fn) {
+    if( $^O =~ /mswin32/i) {
+        require Win32API::File;
+        # require Win32::LongPath;
+        my $fa = Win32API::File::GetFileAttributes($fn);
+        return & Win32API::File::FILE_ATTRIBUTE_REPARSE_POINT();
+        #if( $fa & Win32::LongPath::FILE_ATTRIBUTE_REPARSE_POINT() ) {
+        #    $fn = Win32::LongPath::readlinkL($fn)
+        #        or die $^E;
+        #}
+    }
+}
+
 # We currently expect entries from a filesystem, not ftp/webdav/ssh yet
 sub scan_tree_bf( %options ) {
     my $on_file      = delete $options{ file } // sub {};
@@ -97,9 +110,18 @@ sub scan_tree_bf( %options ) {
             };
 
             my $dn = $entry->{name};
-            opendir my $dh, $dn or croak "$dn: $!";
+
+            # Resolve junctions on Windows, currently we skip those instead
+            if( is_win32_reparse($dn)) {
+                next
+            };
+
+            # $dn = win32_reparse($dn);
+            # warn "[$dn]";
+            opendir my $dh, $dn or croak "Couldn't read contents of '$dn': $!";
             my @entries = map {
                 my $full = "$dn/$_";
+
                 _collect_fs_info( $full, $dn )
             } grep {
                     $_ ne '.'
