@@ -60,7 +60,9 @@ for my $doc (@docs) {
     my( $html) = $doc->{ content }->{ html };
     my( $title ) = $doc->{ content }->{ title };
 
-    local $main::item_language = $doc->{content}->{language};
+    local $Filesys::DB::FTS::Tokenizer::tokenizer_language = $doc->{content}->{language};
+
+    my $language = $doc->{content}->{language};
 
     my $tmp_res = $store->selectall_named(<<'', $entry_id, $language, $html, $title )->[0];
         INSERT INTO filesystem_entry_fts5(content, title, language, entry_id)
