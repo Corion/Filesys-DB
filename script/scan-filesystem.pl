@@ -138,12 +138,26 @@ sub timestamp($ts=time) {
     my $last;
     my $colcount;
 
-    $SIG{WINCH} = sub {
-        undef $colcount;
-    };
+    our $use_tput = `tput cols`;
+    state $is_tty = -t STDOUT;
+
+    sub get_colcount() {
+        if( $use_tput ) {
+            $SIG{WINCH} = sub {
+                undef $colcount;
+            };
+
+            return 0+`tput cols`
+        } elsif( $^O =~ /mswin/i ) {
+            require Win32::Console;
+            return [Win32::Console->new()->Size()]->[0]
+        } else {
+            return undef
+        }
+    }
 
     sub col_trunc($msg) {
-        $colcount //= 0+`tput cols`;
+        $colcount //= get_colcount();
         my $vis = $msg;
         if( length($msg) > $colcount ) {
              $vis = substr( $msg, 0, $colcount-4 ) . '...';
@@ -152,6 +166,7 @@ sub timestamp($ts=time) {
     }
 
     sub status($msg) {
+        return if ! $is_tty; # no status if nobody is watching
         local $|=1;
         my $rubout = "";
         if( $last ) {
