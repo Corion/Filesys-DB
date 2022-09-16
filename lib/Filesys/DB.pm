@@ -12,6 +12,7 @@ use PadWalker 'var_name'; # for scope magic...
 use DBIx::RunSQL;
 use Encode 'encode', 'decode', '_utf8_off';
 use JSON 'encode_json', 'decode_json';
+use YAML 'LoadFile';
 
 use Carp 'croak';
 
@@ -54,8 +55,9 @@ sub _restructure_mountpoints( $self, $mountpoints ) {
             $mountpoints->{$mp} = +{ directory => $mountpoints->{$mp} };
         };
         # Backfill the alias into the structure
-        $mountpoints->{$mp}->{alias} = $mp;
+        $mountpoints->{$mp}->{alias} //= $mp;
     }
+    return
 }
 
 =head2 C<< ->init_config >>
@@ -74,16 +76,13 @@ sub init_config( $self, %options ) {
     my $user_config = {};
     $options{ config_file } //= $options{ default_config_file };
     if(! defined $options{ config_file } ) {
+        my $alias = $options{ mount_alias } // '${MOUNT}';
         $user_config = {
-            mountpoints => [
-                {
-                    alias => $options{ mount_alias } // '${MOUNT}',
-                    directory => $options{ mountpoint } //  $ARGV[0],
+            mountpoints =>
+                {  $alias => { alias => $alias, directory => $options{ mountpoint } //  $ARGV[0], },
                 }
-            ],
         }
-    }
-    if( -f $options{ config_file }) {
+    } elsif ( -f $options{ config_file }) {
         $user_config = LoadFile( $options{ config_file });
     };
     $user_config->{mountpoints} //= {};
@@ -91,7 +90,7 @@ sub init_config( $self, %options ) {
     # Should we merge or simply replace?!
 
     $self->{mountpoints} = $user_config->{mountpoints};
-    if( $options{mountpoints}) {
+    if( keys %{$self->{mountpoints}}) {
         $self->_restructure_mountpoints( $self->{mountpoints});
     }
     return ($config, $user_config);

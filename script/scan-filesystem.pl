@@ -20,8 +20,11 @@ use File::Basename;
 
 use Digest::SHA;
 use MIME::Detect;
-use Music::Tag 'traditional' => 1;
+BEGIN {
+$ENV{HOME} //= $ENV{USERPROFILE}; # to shut up Music::Tag complaining about undefined $ENV{HOME}
+}
 
+use Music::Tag 'traditional' => 1;
 use Apache::Tika::Server;
 
 GetOptions(
@@ -31,34 +34,25 @@ GetOptions(
     'rescan|r'       => \my $rescan,
 );
 
-my $config = {};
-my $user_config = {};
-if(! defined $config_file ) {
-    if ( 'filesys-db.yaml' ) {
-        $config_file = 'filesys-db.yaml';
-    } else {
-        $user_config = {
-            mountpoints => [
-                {
-                  alias => $mount_alias // '${MOUNT}',
-                  directory => $mountpoint //  $ARGV[0],
-                }
-            ],
-        }
-    }
-}
-if( -f $config_file ) {
-    $user_config = LoadFile( $config_file );
-};
-$user_config->{mountpoints} //= {};
-$config->{mountpoints} = $user_config->{mountpoints};
-
-my $store = Filesys::DB->new(
-    mountpoints => {
-        %{ $config->{mountpoints} },
-        maybe $mount_alias => $mountpoint,
-    },
+my $store = Filesys::DB->new();
+$store->init_config(
+    default_config_file => 'filesys-db.yaml',
+    config_file         => $config_file,
 );
+
+if( $mount_alias and $mountpoint ) {
+    $store->mountpoints->{ $mount_alias } = +{ directory => $mountpoint, alias => $mount_alias };
+}
+
+# Also, if we only have the alias, extract the base directory to scan from
+# there:
+if( $mount_alias && !@ARGV ) {
+    my $mp = $store->mountpoints->{$mount_alias}
+        or die "Unknown mount point '$mount_alias'";
+    use Data::Dumper;
+    warn Dumper $store->mountpoints;
+    push @ARGV, $store->mountpoints->{$mount_alias}->{directory}
+}
 
 # We want a breadth-first FS scan, preferring the most recent entries
 # over older entries (as we assume that old entries don't change much)
