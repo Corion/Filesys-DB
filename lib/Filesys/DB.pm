@@ -221,7 +221,7 @@ sub to_local( $self, $mountpoint, $filename ) {
     return encode('UTF-8', $self->mountpoints->{ $mountpoint }->{directory}) . '/' . $filename;
 }
 
-# here, we take the path as primary key:
+# here, we take the path or entry_id as primary key:
 sub insert_or_update_direntry( $self, $info ) {
     my $local_filename = $info->{filename};
     (my($mountpoint), $info->{filename}) = $self->to_alias( $info->{filename});
@@ -267,6 +267,36 @@ SQL
             on conflict(mountpoint,filename) do
             update set entry_json = :value
             returning entry_id, filename
+SQL
+        $res = $tmp_res->[0]->{entry_id};
+    };
+    $info->{entry_id} = $res;
+    $info->{filename} = $local_filename;
+    return $info
+}
+
+sub delete_direntry( $self, $info ) {
+    my $local_filename = $info->{filename};
+    (my($mountpoint), $info->{filename}) = $self->to_alias( $info->{filename});
+
+    my $res;
+    if( defined $info->{entry_id}) {
+        my $entry_id = $info->{entry_id};
+        my $tmp_res = $self->selectall_named(<<'SQL', $entry_id )->[0];
+            delete from filesystem_entry 
+            where entry_id=:entry_id
+            returning entry_id
+SQL
+        $res = $tmp_res->{entry_id};
+
+    } else {
+        # $info->{filename} must exist
+        my $filename = $info->{filename};
+        my $tmp_res = $self->selectall_named(<<'SQL', $mountpoint, $filename );
+            delete from filesystem_entry 
+            where mountpoint=:mountpoint
+              and filename=:filename
+            returning entry_id
 SQL
         $res = $tmp_res->[0]->{entry_id};
     };

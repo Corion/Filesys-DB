@@ -150,6 +150,7 @@ sub scan_tree_bf( %options ) {
 };
 
 sub basic_direntry_info( $ent, $context, $defaults ) {
+    $context //= { stat => [stat($ent)] };
     return {
         %$defaults,
         filename => $ent,
@@ -492,25 +493,28 @@ if( $action eq 'scan') {
 } elsif ($action eq 'watch' ) {
     my $watcher = Filesys::DB::Watcher->new(store => $store);
     $watcher->watch(cb => sub($ev) {
+        my $file = $ev->{path};
         if( $ev->{action} eq 'added') {
             my $info = $store->find_direntry_by_filename( $file );
-            if( ! $info) {
-                $info = basic_direntry_info($file,$context, { entry_type => 'file' });
-                $info = $store->insert_or_update_direntry($info);
-            };
-            $info = update_properties( $info, force => 1 );
+            if( -f $file ) {
+                if( ! $info) {
+                    $info = basic_direntry_info($file, undef, { entry_type => 'file' });
+                };
+            } elsif( -d $file ) {
+                if( ! $info) {
+                    $info = basic_direntry_info($file, undef, { entry_type => 'directory' });
+                };
+            }
+            $info = $store->insert_or_update_direntry($info);
             
         } elsif( $ev->{action} eq 'removed') {
             # we should remove the file from the DB
+            my $info = $store->insert_or_update_direntry({ filename => $ev->{path}});
             
         } elsif( $ev->{action} eq 'modified' ) {
             # we should update (or remove?) our metadata
             my $info = $store->find_direntry_by_filename( $file );
-            if( ! $info) {
-                $info = basic_direntry_info($file,$context, { entry_type => 'file' });
-                $info = $store->insert_or_update_direntry($info);
-            };
-            $info = update_properties( $info, force => 1 );
+            $info = update_properties( $info );
             
         } elsif( $ev->{action} eq 'old_name' ) {
             # how can we handle this old/new thing
