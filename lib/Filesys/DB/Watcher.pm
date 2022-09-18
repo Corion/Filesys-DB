@@ -23,11 +23,11 @@ Blocks and watches all mountpoints for updates
 
 sub watch( $self, %options ) {
     require Filesys::Notify::Win32::ReadDirectoryChanges;
-    my $w = Filesys::Notify::Win32::ReadDirectoryChanges->new();
+    my $w = Filesys::Notify::Win32::ReadDirectoryChanges->new(subtree => 1);
     for my $mp (@{ $self->mountpoints }) {
-        $w->watch_directory( $self->store->to_local($mp,''));
+        $w->watch_directory( path => $self->store->to_local($mp,''));
     };
-    $w->watch_directory( 'C:/Users/Corion/Projekte');
+    $w->watch_directory( path => 'C:/Users/Corion/Projekte');
     my $q = $w->queue;
     use Data::Dumper;
     while( my@items = $q->dequeue) {
