@@ -266,14 +266,22 @@ sub _applicable_properties( $props, $info, $options, $visual='???' ) {
                 my $do_update = $options->{ force }
                             || ! defined $path_cache{ $prop }->value($info);
                 if( $do_update ) {
-                    push @res, _applicable_properties( $props->{$prop}, $info, $options, $vis );
+                    my @prop;
+                    eval { @prop = _applicable_properties( $props->{$prop}, $info, $options, $vis ); };
+                    if( $@ ) {
+                        return
+                    } else {
+                        push @res, @prop
+                    }
                 }
 
             } elsif( $prop =~ m!^[-.*\w]+/[-.*\w]+\z! ) {
                 # MIME type
                 # Check that it applies (or is empty?!)
-                if( _mime_match( $prop, $info->{mime_type} )) {
-                    push @res, _applicable_properties( $props->{$prop}, $info, $options, $visual );
+                eval {
+                    if( _mime_match( $prop, $info->{mime_type} )) {
+                        push @res, _applicable_properties( $props->{$prop}, $info, $options, $visual );
+                    }
                 }
             } else {
                 croak "Unknown property spec '$prop'";
@@ -335,15 +343,23 @@ our %file_properties = (
         my $file = $info->{filename};
         if( $info->{entry_type} eq 'file' ) {
             my $digest = Digest::SHA->new(256);
-            $digest->addfile($file);
-            $info->{sha256} = $digest->hexdigest;
-            return 1
+            eval {
+                $digest->addfile($file);
+                $info->{sha256} = $digest->hexdigest;
+                return 1
+            };
+            return 0;
         }
     },
     '$.mime_type' => sub( $info ) {
         state $mime = MIME::Detect->new();
         if( $info->{entry_type} eq 'file' ) {
-            my @types = $mime->mime_types($info->{filename});
+            
+            my @types;
+            eval { @types = $mime->mime_types($info->{filename}); };
+            if( $@ ) {
+                return 0;
+            };
             if( @types ) {
                 my $type = $types[0];
                 $info->{mime_type} = $type->mime_type;
