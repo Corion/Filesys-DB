@@ -155,7 +155,7 @@ Add a directory to the list of watched directories.
 sub watch_directory( $self, %options ) {
     my $dir = delete $options{ path };
     if( $self->watchers->{$dir}) {
-        $self->unwatch_directory( $dir );
+        $self->unwatch_directory( path => $dir );
     }
     $self->watchers->{ $dir } = $self->build_watcher(
         queue => $self->queue,
@@ -183,7 +183,7 @@ sub unwatch_directory( $self, %options ) {
 sub DESTROY($self) {
     if( my $w = $self->{watchers}) {
         for my $t (keys %$w) {
-            $self->unwatch_directory( $t )
+            $self->unwatch_directory( path => $t )
         }
     };
 }
