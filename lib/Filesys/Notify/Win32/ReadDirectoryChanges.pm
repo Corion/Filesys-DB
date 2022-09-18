@@ -125,19 +125,22 @@ sub _ReadDirectoryChangesW( $hDirectory, $watchSubTree, $filter ) {
 }
 
 sub build_watcher( $self, %options ) {
+    my $path = delete $options{ path };
     my $subtree = !!( $options{ subtree } // $self->subtree );
     my $queue = $self->queue;
-    my $hPath = CreateFile( $options{ path }, FILE_LIST_DIRECTORY()|GENERIC_READ(), FILE_SHARE_READ() | FILE_SHARE_WRITE(), [], OPEN_EXISTING(), FILE_FLAG_BACKUP_SEMANTICS(), [] )
+    my $hPath = CreateFile( $path, FILE_LIST_DIRECTORY()|GENERIC_READ(), FILE_SHARE_READ() | FILE_SHARE_WRITE(), [], OPEN_EXISTING(), FILE_FLAG_BACKUP_SEMANTICS(), [] )
         or die $^E;
-    my $thr = threads->new( sub($hPath,$subtree,$queue) {
+    $path =~ s![\\/]$!!;
+    my $thr = threads->new( sub($path,$hPath,$subtree,$queue) {
         while(1) {
             # 0x1b means 'DIR_NAME|FILE_NAME|LAST_WRITE|SIZE' = 2|1|0x10|8
             my $res = _ReadDirectoryChangesW($hPath, $subtree, 0x1b);
             for my $i (_unpack_file_notify_information($res)) {
+                $i->{path} = $path . "/" . $i->{path};
                 $queue->enqueue($i);
             };
         }
-    }, $hPath, $subtree, $queue);
+    }, $path, $hPath, $subtree, $queue);
     return $thr;
 }
 

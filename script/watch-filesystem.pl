@@ -3,8 +3,8 @@ use 5.020;
 use feature 'signatures';
 no warnings 'experimental::signatures';
 
-use Filesys::DB::Watcher;
 use Filesys::DB;
+use Filesys::DB::Watcher;
 
 my $store = Filesys::DB->new();
 $store->init_config(
@@ -16,4 +16,7 @@ my $w = Filesys::DB::Watcher->new(
     store => $store,
 );
 
-$w->watch;
+$w->watch(cb => sub($event) {
+    # (re)scan $event->{path}
+    say join ":", $event->{action}, $event->{path}
+});
