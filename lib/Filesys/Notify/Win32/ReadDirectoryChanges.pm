@@ -34,13 +34,23 @@ sub _unpack_file_notify_information( $buf ) {
 #   DWORD FileNameLength;
 #   WCHAR FileName[1];
 # } FILE_NOTIFY_INFORMATION, *PFILE_NOTIFY_INFORMATION;
+
+    state @action = (
+        'unknown',
+        'added',
+        'removed',
+        'modified',
+        'old_name',
+        'new_name',
+    );
+
     my @res;
     my $ofs = 0;
     do {
         my ($next, $action, $fn ) = unpack 'VVV/a', $buf;
         $ofs = $next;
         $fn = decode( 'UTF-16le', $fn );
-        push @res, { action => $action, path => $fn };
+        push @res, { action => $action[ $action ], path => $fn };
         $buf = substr($buf, $next);
     } while $ofs > 0;
     @res
