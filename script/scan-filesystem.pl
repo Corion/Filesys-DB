@@ -32,6 +32,8 @@ GetOptions(
     'alias|a=s'      => \my $mount_alias,
     'config|c=s'     => \my $config_file,
     'rescan|r'       => \my $rescan,
+    'all'            => \my $scan_all_mountpoints,
+    'watch'          => \my $watch_all_mountpoints,
 );
 
 my $store = Filesys::DB->new();
@@ -49,9 +51,9 @@ if( $mount_alias and $mountpoint ) {
 if( $mount_alias && !@ARGV ) {
     my $mp = $store->mountpoints->{$mount_alias}
         or die "Unknown mount point '$mount_alias'";
-    use Data::Dumper;
-    warn Dumper $store->mountpoints;
     push @ARGV, $store->mountpoints->{$mount_alias}->{directory}
+} elsif( $scan_all_mountpoints ) {
+    push @ARGV, map { $store->mountpoints->{ $_ }->{directory}} sort keys %{$store->mountpoints}
 }
 
 # We want a breadth-first FS scan, preferring the most recent entries
@@ -496,3 +498,9 @@ if( ! $rescan) {
 #     means finding two relatively prime numbers, one the frequency and one the
 #     maximum expected staleness, and scanning all files with
 #               entry_id % (count/(frequency*staleness)) = time()/frequency
+# [ ] Watch for changes to mountpoints or stuff below them, and automatically
+#     update the database from that - Win32::ChangeNotify and/or inotify2,
+#     and/or File::ChangeNotify::Simple
+# [ ] maybe also be "reactive" and issue events
+#     based on those changes? Or, alternatively, have SQLite be such an event
+#     queue, as we have timestamps and thus can even replay events
