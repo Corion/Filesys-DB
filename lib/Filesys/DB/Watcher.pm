@@ -27,11 +27,10 @@ sub watch( $self, %options ) {
     for my $mp (@{ $self->mountpoints }) {
         $w->watch_directory( path => $self->store->to_local($mp,''));
     };
-    $w->watch_directory( path => 'C:/Users/Corion/Projekte');
     my $q = $w->queue;
-    use Data::Dumper;
-    while( my@items = $q->dequeue) {
-        print Dumper \@items;
+    my $cb = $options{ cb };
+    while( my $ev = $q->dequeue) {
+        $cb->($ev);
     }
 }
 

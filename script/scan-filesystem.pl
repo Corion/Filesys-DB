@@ -8,6 +8,8 @@ no warnings 'experimental::signatures';
 use PerlX::Maybe;
 
 use Filesys::DB;
+use Filesys::DB::Watcher;
+
 use Carp 'croak';
 use Getopt::Long;
 use POSIX 'strftime';
@@ -35,6 +37,10 @@ GetOptions(
     'all'            => \my $scan_all_mountpoints,
     'watch'          => \my $watch_all_mountpoints,
 );
+
+my $action = $watch_all_mountpoints ? 'watch'
+           : $rescan ? 'rescan'
+           : 'scan';
 
 my $store = Filesys::DB->new();
 $store->init_config(
@@ -427,7 +433,7 @@ sub scan_entries( %options ) {
     }
 }
 
-if( ! $rescan) {
+if( $action eq 'scan') {
     # Maybe we want to preseed with DB results so that we get unscanned directories
     # first, or empty directories ?!
     scan_tree_bf(
@@ -469,7 +475,7 @@ if( ! $rescan) {
             return 1
         },
     );
-} else {
+} elsif( $action eq 'rescan' ) {
     my $where = join " ", @ARGV;
     status( sprintf "% 16s | %s", 'rescan', $where);
     scan_tree_db(
@@ -483,6 +489,35 @@ if( ! $rescan) {
         },
         where => $where,
     );
+} elsif ($action eq 'watch' ) {
+    my $watcher = Filesys::DB::Watcher->new(store => $store);
+    $watcher->watch(cb => sub($ev) {
+        if( $ev->{action} eq 'added') {
+            my $info = $store->find_direntry_by_filename( $file );
+            if( ! $info) {
+                $info = basic_direntry_info($file,$context, { entry_type => 'file' });
+                $info = $store->insert_or_update_direntry($info);
+            };
+            $info = update_properties( $info, force => 1 );
+            
+        } elsif( $ev->{action} eq 'removed') {
+            # we should remove the file from the DB
+            
+        } elsif( $ev->{action} eq 'modified' ) {
+            # we should update (or remove?) our metadata
+            my $info = $store->find_direntry_by_filename( $file );
+            if( ! $info) {
+                $info = basic_direntry_info($file,$context, { entry_type => 'file' });
+                $info = $store->insert_or_update_direntry($info);
+            };
+            $info = update_properties( $info, force => 1 );
+            
+        } elsif( $ev->{action} eq 'old_name' ) {
+            # how can we handle this old/new thing
+        } elsif( $ev->{action} eq 'new_name' ) {
+            # how can we handle this old/new thing
+        }
+    });
 }
 
 # [ ] add "ephemeral" or "auxiliary" file/entry type, for thumbnails and other
