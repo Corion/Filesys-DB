@@ -192,6 +192,7 @@ sub selectall_named {
 
 sub get_mountpoint_alias( $self, $filename ) {
     my $longest;
+    $filename =~ s!\\!/!g;
     my $mp = $self->mountpoints;
     for my $alias (sort {    length $mp->{$b}->{directory} <=> length $mp->{$a}->{directory}
                           || $a cmp $b # do we really want to compare the names here?!
