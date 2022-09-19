@@ -508,6 +508,7 @@ if( $action eq 'scan') {
     );
 } elsif ($action eq 'watch' ) {
     my $watcher = Filesys::DB::Watcher->new(store => $store);
+    status( sprintf "% 16s | %s", 'wait', "");
     $watcher->watch(cb => sub($ev) {
         my $file = $ev->{path};
         if( $ev->{action} eq 'added') {
@@ -537,6 +538,7 @@ if( $action eq 'scan') {
         } elsif( $ev->{action} eq 'new_name' ) {
             # how can we handle this old/new thing
         }
+        status( sprintf "% 16s | %s", 'wait', "");
     });
 }
 
