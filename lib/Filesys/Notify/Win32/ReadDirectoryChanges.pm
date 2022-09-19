@@ -130,6 +130,10 @@ sub _ReadDirectoryChangesW( $hDirectory, $watchSubTree, $filter ) {
     }
 }
 
+# Add ReadDirectoryChangesExW support
+# Consider sub backfillExtendedInformation($fn,$info) {
+# }
+
 sub build_watcher( $self, %options ) {
     my $path = delete $options{ path };
     my $subtree = !!( $options{ subtree } // $self->subtree );
