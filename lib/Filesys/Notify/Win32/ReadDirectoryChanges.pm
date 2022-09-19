@@ -134,6 +134,7 @@ sub build_watcher( $self, %options ) {
     my $path = delete $options{ path };
     my $subtree = !!( $options{ subtree } // $self->subtree );
     my $queue = $self->queue;
+    # XXX check if/how we can pass in UTF-8 names, and if we need to encode them to UTF-16LE first
     my $hPath = CreateFile( $path, FILE_LIST_DIRECTORY()|GENERIC_READ(), FILE_SHARE_READ() | FILE_SHARE_WRITE(), [], OPEN_EXISTING(), FILE_FLAG_BACKUP_SEMANTICS(), [] )
         or die $^E;
     $path =~ s![\\/]$!!;
@@ -233,5 +234,8 @@ L<Filesys::Notify::Simple>
 L<Filesys::Notify>
 
 L<Win32::ChangeNotify>
+
+Currently, no additional information like that available through L<https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-readdirectorychangesexw|ReadDirectoryChangesExW>
+is collected. But a wrapper/emulation could provide that information whenever RDCE is unavailable (on Windows versions before Windows 10).
 
 =cut
