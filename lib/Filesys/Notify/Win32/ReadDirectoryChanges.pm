@@ -6,8 +6,9 @@ use feature 'signatures';
 no warnings 'experimental::signatures';
 
 # First prototype
+use File::Spec;
 use Win32::API;
-use Win32API::File 'CreateFile', ':FILE_FLAG_', 'FILE_LIST_DIRECTORY', 'OPEN_EXISTING', 'FILE_SHARE_WRITE', 'FILE_SHARE_READ', 'GENERIC_READ';
+use Win32API::File 'CreateFile', 'CloseHandle', ':FILE_FLAG_', 'FILE_LIST_DIRECTORY', 'OPEN_EXISTING', 'FILE_SHARE_WRITE', 'FILE_SHARE_READ', 'GENERIC_READ';
 use threads; # we launch a thread for each watched tree to keep the logic simple
 use Thread::Queue;
 use Encode 'decode';
@@ -47,7 +48,7 @@ sub BUILD($self, $args) {
     if( my $dirs = delete $args->{directory}) {
         $dirs = [$dirs] if ! ref $dirs;
         for my $d (@$dirs) {
-            $self->add_watcher( path => $d );
+            $self->watch_directory( path => $d );
         }
     }
 }
@@ -76,6 +77,8 @@ has 'queue' => (
 );
 
 Win32::API->Import( 'kernel32.dll', 'ReadDirectoryChangesW', 'NPNNNPNN','N' )
+    or die $^E;
+Win32::API->Import( 'kernel32.dll', 'CancelIoEx', 'NN','N' )
     or die $^E;
 
 sub _unpack_file_notify_information( $buf ) {
@@ -110,18 +113,21 @@ sub _unpack_file_notify_information( $buf ) {
 sub _ReadDirectoryChangesW( $hDirectory, $watchSubTree, $filter ) {
     my $buffer = "\0" x 65520;
     my $returnBufferSize = "\0" x 4;
-    ReadDirectoryChangesW(
+    my $r = ReadDirectoryChangesW(
         $hDirectory,
-        $buffer, 
+        $buffer,
         length($buffer),
         !!$watchSubTree,
         $filter,
         $returnBufferSize,
         0,
-        0)
-        or die $^E;
-    $returnBufferSize = unpack 'V', $returnBufferSize;
-    return substr $buffer, 0, $returnBufferSize;
+        0);
+    if( $r ) {
+        $returnBufferSize = unpack 'V', $returnBufferSize;
+        return substr $buffer, 0, $returnBufferSize;
+    } else {
+        return undef
+    }
 }
 
 sub build_watcher( $self, %options ) {
@@ -132,16 +138,25 @@ sub build_watcher( $self, %options ) {
         or die $^E;
     $path =~ s![\\/]$!!;
     my $thr = threads->new( sub($path,$hPath,$subtree,$queue) {
-        while(1) {
+        my $running = 1;
+        while($running) {
             # 0x1b means 'DIR_NAME|FILE_NAME|LAST_WRITE|SIZE' = 2|1|0x10|8
             my $res = _ReadDirectoryChangesW($hPath, $subtree, 0x1b);
+
+            if( ! defined $res ) {
+                if( $^E != 995 ) { # ReadDirectoryChangesW got cancelled and we should quit
+                    warn $^E;
+                }
+                last
+            }
+
             for my $i (_unpack_file_notify_information($res)) {
-                $i->{path} = $path . "/" . $i->{path};
+                $i->{path} = File::Spec->catfile( $path , $i->{path} );
                 $queue->enqueue($i);
             };
         }
     }, $path, $hPath, $subtree, $queue);
-    return $thr;
+    return { thread => $thr, handle => $hPath };
 }
 
 =head2 C<< ->watch_directory >>
@@ -176,7 +191,10 @@ come in some events stored for that directory previously in the queue.
 sub unwatch_directory( $self, %options ) {
     my $dir = delete $options{ path };
     if( my $t = delete $self->watchers->{ $dir }) {
-        $t->kill;
+        CancelIoEx($t->{handle},0);
+        CloseHandle($t->{handle});
+        my $thr = delete $t->{thread};
+        eval { $thr->join; }; # sometimes the thread is not yet joinable?!
     }
 }
 

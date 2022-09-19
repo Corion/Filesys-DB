@@ -23,6 +23,7 @@ Makefile$
 ^.releaserc
 ^.*.cmd
 ^chrome-versions
-^WWW-Mechanize-Chrome
+^Filesys-DB
+^cpanfile.snapshot
 ^frame-\d+.png
 ^demo/
