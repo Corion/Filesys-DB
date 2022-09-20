@@ -142,7 +142,6 @@ sub scan_tree_bf( %options ) {
             @$queue = sort { $b->{stat}->[9] <=> $a->{stat}->[9] } @$queue, @entries;
 
         } elsif( $entry->{type} eq 'file' ) {
-            # Conserve some memory
             $on_file->($entry->{name}, $entry);
 
         } else {
