@@ -34,6 +34,7 @@ GetOptions(
     'alias|a=s'      => \my $mount_alias,
     'config|c=s'     => \my $config_file,
     'rescan|r'       => \my $rescan,
+    'dry-run|n'      => \my $dry_run,
     'all'            => \my $scan_all_mountpoints,
     'watch'          => \my $watch_all_mountpoints,
 );
@@ -422,7 +423,7 @@ sub update_properties( $info, %options ) {
 
     if( $info->{last_scanned} ne $last_ts ) {
         #msg( sprintf "% 16s | %s", 'update', $file);
-        $info = $store->insert_or_update_direntry($info);
+        $info = do_update($info);
     }
     return $info
 }
@@ -450,6 +451,23 @@ sub scan_entries( %options ) {
     }
 }
 
+sub do_delete( $info ) {
+    if( $dry_run ) {
+        msg( "delete,$info->{filename}" );
+    } else {
+        $store->delete_direntry($info);
+    }
+};
+
+sub do_update( $info, %options ) {
+    if( $dry_run ) {
+        msg( "update,$info->{filename}" );
+        return $info;
+    } else {
+        $info = $store->insert_or_update_direntry($info);
+    }
+};
+
 if( $action eq 'scan') {
     # Maybe we want to preseed with DB results so that we get unscanned directories
     # first, or empty directories ?!
@@ -461,22 +479,25 @@ if( $action eq 'scan') {
             my $info = $store->find_direntry_by_filename( $file );
             if( ! $info) {
                 $info = basic_direntry_info($file,$context, { entry_type => 'file' });
-                $info = $store->insert_or_update_direntry($info);
+                $info = do_update( $info );
             };
-            $info = update_properties( $info );
-
-            # We also want to create a relation here, with our parent directory?!
-            # We have that information in context->{parent}
-            if( defined $context->{parent}) {
-                # This should always exist since we scan and create directories
-                # before scanning and creating their contents
-                my $parent = $store->find_direntry_by_filename( $context->{parent});
-
-                my $relation = $store->insert_or_update_relation({
-                    parent_id => $parent->{entry_id},
-                    child_id  => $info->{entry_id},
-                    relation_type => 'directory',
-                });
+            
+            if( ! $dry_run ) {
+                $info = update_properties( $info );
+    
+                # We also want to create a relation here, with our parent directory?!
+                # We have that information in context->{parent}
+                if( defined $context->{parent}) {
+                    # This should always exist since we scan and create directories
+                    # before scanning and creating their contents
+                    my $parent = $store->find_direntry_by_filename( $context->{parent});
+    
+                    my $relation = $store->insert_or_update_relation({
+                        parent_id => $parent->{entry_id},
+                        child_id  => $info->{entry_id},
+                        relation_type => 'directory',
+                    });
+                }
             }
 
         },
@@ -484,8 +505,7 @@ if( $action eq 'scan') {
             my $info = $store->find_direntry_by_filename( $directory );
             if( ! $info ) {
                 $info = basic_direntry_info($directory,$context,{ entry_type => 'directory' });
-                #status( "-- %s (%d)", $directory, insert_or_update_direntry($info)->{entry_id} );
-                $info = $store->insert_or_update_direntry($info);
+                $info = do_update($info);
             };
 
             status( sprintf "% 16s | %s", 'scan', $directory);
@@ -493,16 +513,32 @@ if( $action eq 'scan') {
         },
     );
 } elsif( $action eq 'rescan' ) {
+    @ARGV = '1=1' unless @ARGV;
     my $where = join " ", @ARGV;
     status( sprintf "% 16s | %s", 'rescan', $where);
     scan_tree_db(
         file => sub( $info, $context ) {
             # do a liveness check? and potentially delete the file entry
             # also, have a dry-run option, just listing the files out of date?!
-            $info = update_properties( $info, force => 1 );
+            if( ! -e $info->{filename}) {
+                # The file has gone away
+                do_delete({ filename => $info->{filename}});
+                # This blows away all other data, like tags, etc. as well.
+                # Maybe we would want to mark it as orphaned instead?!
+            } else {
+                if( ! $dry_run ) {
+                    $info = update_properties( $info, force => 1 );
+                };
+            }
         },
         directory => sub( $info, $context ) {
+            if( ! -e $info->{filename}) {
+                # The directory has gone away
+                # use Data::Dumper; warn Dumper $context;
+                # ...
+            };
             return 1
+            
         },
         where => $where,
     );
@@ -525,7 +561,7 @@ if( $action eq 'scan') {
                     $info = basic_direntry_info($file, undef, { entry_type => 'directory' });
                 };
             }
-            $info = $store->insert_or_update_direntry($info);
+            $info = do_update($info);
 
         } elsif( $ev->{action} eq 'removed') {
             # we should remove the file from the DB
@@ -533,13 +569,22 @@ if( $action eq 'scan') {
 
         } elsif( $ev->{action} eq 'modified' ) {
             # we should update (or remove?) our metadata
+            # but starting right now will mean outdated information?!
+            # This will skip/ignore zero-size files...
+            return unless -s $file;
+            
             my $info = $store->find_direntry_by_filename( $file );
             $info = update_properties( $info, force => 1 );
 
         } elsif( $ev->{action} eq 'old_name' ) {
-            # how can we handle this old/new thing
+            # ignore this
         } elsif( $ev->{action} eq 'new_name' ) {
-            # how can we handle this old/new thing
+            # ignore this
+        } elsif( $ev->{action} eq 'renamed' ) {
+            # how should we handle renaming an item? Force a rescan to update other metadata?!
+            my $info = $store->find_direntry_by_filename( $ev->{old_name});
+            $info->{filename} = $ev->{new_name};
+            $info = update_properties( $info, force => 1 );
         }
         status( sprintf "% 16s | %s", 'wait', "");
     });
@@ -561,6 +606,7 @@ if( $action eq 'scan') {
 # [ ] Watch for changes to mountpoints or stuff below them, and automatically
 #     update the database from that - Win32::ChangeNotify and/or inotify2,
 #     and/or File::ChangeNotify::Simple
+#     - [x] This now exists for Win32
 # [ ] maybe also be "reactive" and issue events
 #     based on those changes? Or, alternatively, have SQLite be such an event
 #     queue, as we have timestamps and thus can even replay events
