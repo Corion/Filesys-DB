@@ -100,11 +100,27 @@ sub _unpack_file_notify_information( $buf ) {
 
     my @res;
     my $ofs = 0;
+    my $last_name;
+    my $last_action;
     do {
         my ($next, $action, $fn ) = unpack 'VVV/a', $buf;
         $ofs = $next;
         $fn = decode( 'UTF-16le', $fn );
         push @res, { action => $action[ $action ], path => $fn };
+        
+        if( $action == 5 and $last_action == 4 ) {
+            # Create a synthetic event in addition
+            push @res, {
+                action => 'renamed',
+                old_name => $last_name,
+                new_name => $fn,
+                path     => $last_name,
+                hint => 'synthetic',
+            };
+        }
+        $last_name = $fn;
+        $last_action = $action;
+        
         $buf = substr($buf, $next);
     } while $ofs > 0;
     @res
@@ -230,6 +246,71 @@ sub wait( $self, $cb) {
 }
 
 1;
+
+=head1 EVENTS
+
+The following events are created by ReadDirectoryChangesW resp. this module
+
+=over 4
+
+=item B<added>
+
+  {
+      action   => 'added',
+      path     => 'old-name.example',
+  }
+
+A new file was created
+
+=item B<removed>
+
+  {
+      action   => 'removed',
+      path     => 'old-name.example',
+  }
+
+A file was removed
+
+=item B<modified>
+
+  {
+      action   => 'modified',
+      path     => 'old-name.example',
+  }
+
+A file was modified
+
+=item B<old_name>
+
+  {
+      action   => 'old_name',
+      path     => 'old-name.example',
+  }
+
+First half of a rename
+
+=item B<new_name>
+
+  {
+      action   => 'new_name',
+      path     => 'new-name.example',
+  }
+
+Second half of a rename
+
+=item B<renamed>
+
+Whenever the event B<old_name> is followed immediately by B<new_name>,
+a third, synthetic event is generated, C<renamed>.
+
+  {
+      action   => 'renamed',
+      path     => 'old-name.example',
+      old_name => 'old-name.example',
+      new_name => 'new-name.example',
+  }
+
+=back
 
 =head1 SEE ALSO
 
