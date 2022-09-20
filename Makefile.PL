@@ -40,7 +40,7 @@ my %module = (
         x_static_install => 1, # we are pure Perl and don't do anything fancy
     },
 
-    MIN_PERL_VERSION => '5.020', # I use // in some places
+    MIN_PERL_VERSION => '5.020', # I use signatures
 
     'LICENSE'=> 'perl',
 
@@ -62,7 +62,7 @@ my %module = (
 
         # 'Filter::signatures'        => '0.09',
         'Carp'                      => 0,
-        'DBD::SQLite'               => '1.71_01',
+        'DBD::SQLite'               => '1.71_06',
         'DBIx::RunSQL'              => 0,
         'PadWalker'                 => 0,
         'Moo'                       => 2, # for some hashes-as-objects
