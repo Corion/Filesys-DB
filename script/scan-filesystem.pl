@@ -8,6 +8,7 @@ no warnings 'experimental::signatures';
 use PerlX::Maybe;
 
 use Filesys::DB;
+use Filesys::TreeWalker 'scan_tree_bf';
 use Filesys::DB::Watcher;
 
 use Carp 'croak';
@@ -65,91 +66,6 @@ if( $mount_alias && !@ARGV ) {
 
 # We want a breadth-first FS scan, preferring the most recent entries
 # over older entries (as we assume that old entries don't change much)
-
-sub _collect_fs_info( $fn, $parent=undef ) {
-    $fn =~ s![/\\]\z!!; # strip off any directory separator as we'll use our own
-    my $type = -f $fn ? 'file'
-             : -d $fn ? 'directory'
-             : undef;
-    return {
-        type   => $type,
-        stat   => [stat($fn)],
-        parent => $parent,
-        name   => $fn,
-    }
-}
-
-sub is_win32_reparse($fn) {
-    if( $^O =~ /mswin32/i) {
-        require Win32API::File;
-        # require Win32::LongPath;
-        my $fa = Win32API::File::GetFileAttributes($fn);
-        return $fa & Win32API::File::FILE_ATTRIBUTE_REPARSE_POINT();
-        #if( $fa & Win32::LongPath::FILE_ATTRIBUTE_REPARSE_POINT() ) {
-        #    $fn = Win32::LongPath::readlinkL($fn)
-        #        or die $^E;
-        #}
-    }
-}
-
-# We currently expect entries from a filesystem, not ftp/webdav/ssh yet
-sub scan_tree_bf( %options ) {
-    my $on_file      = delete $options{ file } // sub {};
-    my $on_directory = delete $options{ directory } // sub {};
-    my $wanted       = delete $options{ wanted } // sub { 1 };
-    my $queue        = delete $options{ queue } // ['.'];
-
-    if( $queue and ! ref $queue) {
-        $queue = [$queue];
-    };
-
-    for my $entry (@$queue) {
-        if(! ref $entry ) {
-            $entry = _collect_fs_info( $entry );
-        }
-    }
-
-    while (@$queue) {
-        my $entry = shift @$queue;
-
-        if( $entry->{type} eq 'directory' ) {
-            if( ! $on_directory->($entry->{name}, $entry)) {
-                # we are actually not interested in this directory
-                next;
-            };
-
-            my $dn = $entry->{name};
-
-            # Resolve junctions on Windows, currently we skip those instead
-            #if( is_win32_reparse($dn)) {
-            #    next
-            #};
-
-            # $dn = win32_reparse($dn);
-            # warn "[$dn]";
-            opendir my $dh, $dn or croak "Couldn't read contents of '$dn': $!";
-            my @entries = map {
-                my $full = "$dn/$_";
-
-                _collect_fs_info( $full, $dn )
-            } grep {
-                    $_ ne '.'
-                and $_ ne '..'
-                and !is_win32_reparse("$dn/$_")
-                and $wanted->("$dn/$_")
-            } readdir $dh;
-
-            @$queue = sort { $b->{stat}->[9] <=> $a->{stat}->[9] } @$queue, @entries;
-
-        } elsif( $entry->{type} eq 'file' ) {
-            # Conserve some memory
-            $on_file->($entry->{name}, $entry);
-
-        } else {
-            # we skip stuff that is neither a file nor a directory
-        }
-    }
-};
 
 sub basic_direntry_info( $ent, $context, $defaults ) {
     $context //= { stat => [stat($ent)] };
