@@ -173,6 +173,11 @@ sub build_watcher( $self, %options ) {
 
             for my $i (_unpack_file_notify_information($res)) {
                 $i->{path} = File::Spec->catfile( $path , $i->{path} );
+                if( $i->{action} eq 'renamed') {
+                    for( qw(old_name new_name)) {
+                        $i->{$_} = File::Spec->catfile( $path , $i->{$_} );
+                    };
+                };
                 $queue->enqueue($i);
             };
         }
