@@ -84,7 +84,7 @@ sub is_win32_reparse($fn) {
         require Win32API::File;
         # require Win32::LongPath;
         my $fa = Win32API::File::GetFileAttributes($fn);
-        return & Win32API::File::FILE_ATTRIBUTE_REPARSE_POINT();
+        return $fa & Win32API::File::FILE_ATTRIBUTE_REPARSE_POINT();
         #if( $fa & Win32::LongPath::FILE_ATTRIBUTE_REPARSE_POINT() ) {
         #    $fn = Win32::LongPath::readlinkL($fn)
         #        or die $^E;
@@ -121,9 +121,9 @@ sub scan_tree_bf( %options ) {
             my $dn = $entry->{name};
 
             # Resolve junctions on Windows, currently we skip those instead
-            if( is_win32_reparse($dn)) {
-                next
-            };
+            #if( is_win32_reparse($dn)) {
+            #    next
+            #};
 
             # $dn = win32_reparse($dn);
             # warn "[$dn]";
@@ -135,6 +135,7 @@ sub scan_tree_bf( %options ) {
             } grep {
                     $_ ne '.'
                 and $_ ne '..'
+                and !is_win32_reparse("$dn/$_")
                 and $wanted->("$dn/$_")
             } readdir $dh;
 
@@ -475,7 +476,7 @@ if( $action eq 'scan') {
         wanted => \&keep_fs_entry,
         queue => \@ARGV,
         file => sub($file,$context) {
-
+msg($file);
             my $info = $store->find_direntry_by_filename( $file );
             if( ! $info) {
                 $info = basic_direntry_info($file,$context, { entry_type => 'file' });
