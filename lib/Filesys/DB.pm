@@ -400,6 +400,7 @@ sub entries_ex( $self, %options ) {
            from filesystem_entry
           where 1=1
             and $where
+       order by mtime desc
 SQL
 }
 # No prototype since we want to capture the variables passed in:
