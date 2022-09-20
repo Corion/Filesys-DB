@@ -403,13 +403,7 @@ sub keep_fs_entry( $name ) {
 sub update_properties( $info, %options ) {
     my $last_ts = $info->{last_scanned} // '';
 
-    # How do we find new columns added to basic_direntry_info ?!
-    # Do we specify these all manually?!
-
     # This would be a kind of plugin system, maybe?!
-    # Also, how will we handle a nested key like media.title ?! ( meaning ->{media}->{title} )
-    #state %path_cache;
-    #for my $prop (sort keys %file_properties) {
     my @updaters = _applicable_properties( \%file_properties, $info, \%options );
     for my $up (@updaters) {
         my( $vis, $cb ) = @$up;
