@@ -240,8 +240,16 @@ Synchronously wait for file system events.
 =cut
 
 sub wait( $self, $cb) {
-    while( my @events = $self->queue->dequeue) {
-        $cb->($_) for @events;
+    while( 1 ) {
+        my @events = $self->queue->dequeue;
+        for (@events) {
+            if( defined $_ ) {
+                $cb->($_);
+            } else {
+                # somebody did ->queue->enqueue(undef) to stop us
+                last;
+            }
+        };
     };
 }
 
