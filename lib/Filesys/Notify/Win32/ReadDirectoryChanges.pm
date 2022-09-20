@@ -150,6 +150,33 @@ sub _ReadDirectoryChangesW( $hDirectory, $watchSubTree, $filter ) {
 # Consider sub backfillExtendedInformation($fn,$info) {
 # }
 
+# This is what each thread runs, in a named subroutine so
+# we don't accidentially close over some variable
+sub _watcher($path,$hPath,$subtree,$queue) {
+    my $running = 1;
+    while($running) {
+        # 0x1b means 'DIR_NAME|FILE_NAME|LAST_WRITE|SIZE' = 2|1|0x10|8
+        my $res = _ReadDirectoryChangesW($hPath, $subtree, 0x1b);
+
+        if( ! defined $res ) {
+            if( $^E != 995 ) { # ReadDirectoryChangesW got cancelled and we should quit
+                warn $^E;
+            }
+            last
+        }
+
+        for my $i (_unpack_file_notify_information($res)) {
+            $i->{path} = File::Spec->catfile( $path , $i->{path} );
+            if( $i->{action} eq 'renamed') {
+                for( qw(old_name new_name)) {
+                    $i->{$_} = File::Spec->catfile( $path , $i->{$_} );
+                };
+            };
+            $queue->enqueue($i);
+        };
+    }
+};
+
 sub build_watcher( $self, %options ) {
     my $path = delete $options{ path };
     my $subtree = !!( $options{ subtree } // $self->subtree );
@@ -158,30 +185,7 @@ sub build_watcher( $self, %options ) {
     my $hPath = CreateFile( $path, FILE_LIST_DIRECTORY()|GENERIC_READ(), FILE_SHARE_READ() | FILE_SHARE_WRITE(), [], OPEN_EXISTING(), FILE_FLAG_BACKUP_SEMANTICS(), [] )
         or die $^E;
     $path =~ s![\\/]$!!;
-    my $thr = threads->new( sub($path,$hPath,$subtree,$queue) {
-        my $running = 1;
-        while($running) {
-            # 0x1b means 'DIR_NAME|FILE_NAME|LAST_WRITE|SIZE' = 2|1|0x10|8
-            my $res = _ReadDirectoryChangesW($hPath, $subtree, 0x1b);
-
-            if( ! defined $res ) {
-                if( $^E != 995 ) { # ReadDirectoryChangesW got cancelled and we should quit
-                    warn $^E;
-                }
-                last
-            }
-
-            for my $i (_unpack_file_notify_information($res)) {
-                $i->{path} = File::Spec->catfile( $path , $i->{path} );
-                if( $i->{action} eq 'renamed') {
-                    for( qw(old_name new_name)) {
-                        $i->{$_} = File::Spec->catfile( $path , $i->{$_} );
-                    };
-                };
-                $queue->enqueue($i);
-            };
-        }
-    }, $path, $hPath, $subtree, $queue);
+    my $thr = threads->new( \&_watcher, $path, $hPath, $subtree, $queue);
     return { thread => $thr, handle => $hPath };
 }
 
