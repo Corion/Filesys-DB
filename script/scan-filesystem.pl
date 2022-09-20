@@ -354,7 +354,7 @@ our %file_properties = (
     '$.mime_type' => sub( $info ) {
         state $mime = MIME::Detect->new();
         if( $info->{entry_type} eq 'file' ) {
-            
+
             my @types;
             eval { @types = $mime->mime_types($info->{filename}); };
             if( $@ ) {
@@ -509,6 +509,9 @@ if( $action eq 'scan') {
 } elsif ($action eq 'watch' ) {
     my $watcher = Filesys::DB::Watcher->new(store => $store);
     status( sprintf "% 16s | %s", 'wait', "");
+    # Can we / do we want to debounce this? While a file is copied, we will
+    # also start to scan it, which is not great. But waiting a second for things to
+    # settle down also means some async behaviour, which isn't great either
     $watcher->watch(cb => sub($ev) {
         my $file = $ev->{path};
         if( $ev->{action} eq 'added') {
@@ -523,16 +526,16 @@ if( $action eq 'scan') {
                 };
             }
             $info = $store->insert_or_update_direntry($info);
-            
+
         } elsif( $ev->{action} eq 'removed') {
             # we should remove the file from the DB
             my $info = $store->delete_direntry({ filename => $ev->{path}});
-            
+
         } elsif( $ev->{action} eq 'modified' ) {
             # we should update (or remove?) our metadata
             my $info = $store->find_direntry_by_filename( $file );
             $info = update_properties( $info, force => 1 );
-            
+
         } elsif( $ev->{action} eq 'old_name' ) {
             # how can we handle this old/new thing
         } elsif( $ev->{action} eq 'new_name' ) {
