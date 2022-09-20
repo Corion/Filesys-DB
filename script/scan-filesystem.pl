@@ -526,12 +526,12 @@ if( $action eq 'scan') {
             
         } elsif( $ev->{action} eq 'removed') {
             # we should remove the file from the DB
-            my $info = $store->insert_or_update_direntry({ filename => $ev->{path}});
+            my $info = $store->delete_direntry({ filename => $ev->{path}});
             
         } elsif( $ev->{action} eq 'modified' ) {
             # we should update (or remove?) our metadata
             my $info = $store->find_direntry_by_filename( $file );
-            $info = update_properties( $info );
+            $info = update_properties( $info, force => 1 );
             
         } elsif( $ev->{action} eq 'old_name' ) {
             # how can we handle this old/new thing
