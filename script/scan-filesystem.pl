@@ -476,7 +476,6 @@ if( $action eq 'scan') {
         wanted => \&keep_fs_entry,
         queue => \@ARGV,
         file => sub($file,$context) {
-msg($file);
             my $info = $store->find_direntry_by_filename( $file );
             if( ! $info) {
                 $info = basic_direntry_info($file,$context, { entry_type => 'file' });
@@ -534,9 +533,7 @@ msg($file);
         },
         directory => sub( $info, $context ) {
             if( ! -e $info->{filename}) {
-                # The directory has gone away
-                # use Data::Dumper; warn Dumper $context;
-                # ...
+                do_delete({ filename => $info->{filename}});
             };
             return 1
             
@@ -545,7 +542,7 @@ msg($file);
     );
 } elsif ($action eq 'watch' ) {
     my $watcher = Filesys::DB::Watcher->new(store => $store);
-    status( sprintf "% 16s | %s", 'wait', "");
+    status( sprintf "% 16s | %s", 'idle', "");
     # Can we / do we want to debounce this? While a file is copied, we will
     # also start to scan it, which is not great. But waiting a second for things to
     # settle down also means some async behaviour, which isn't great either
@@ -587,7 +584,7 @@ msg($file);
             $info->{filename} = $ev->{new_name};
             $info = update_properties( $info, force => 1 );
         }
-        status( sprintf "% 16s | %s", 'wait', "");
+        status( sprintf "% 16s | %s", 'idle', "");
     });
 }
 
