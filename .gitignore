@@ -16,3 +16,4 @@ frame-*.png
 /.prove
 /.patch
 /.carmel/
+/filesys-db.yaml
