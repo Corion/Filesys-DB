@@ -316,7 +316,22 @@ sub insert_or_update_relation( $self, $info ) {
         returning relation_id
 SQL
     $info->{relation_id} = $res;
+    return $info
 }
+
+sub insert_or_update_collection( $self, $info ) {
+    my $value = encode_json( $info );
+    my $res = $self->selectall_named(<<'SQL', $value );
+        insert into filesystem_collection (collection_json)
+        values (:value)
+        on conflict(collection_type,collection_id) do
+        update set collection_json = :value
+        returning collection_id
+SQL
+    $info->{collection_id} = $res;
+    return $info
+}
+
 
 sub _inflate_entry( $self, $entry ) {
     # Downgrade the string again:

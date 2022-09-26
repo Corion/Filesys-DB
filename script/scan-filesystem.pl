@@ -220,8 +220,8 @@ sub extract_content_via_tika( $info ) {
         my $t = eval {
                     Apache::Tika::Server->new(
             jarfile => '/home/corion/Projekte/Apache-Tika-Async/jar/tika-server-standard-2.3.0.jar',
-            );}
-        eval { $t->launch; }
+            );};
+        eval { $t->launch; };
         ! $@ and $t
     };
     if($tika) {

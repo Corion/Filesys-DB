@@ -61,6 +61,15 @@ create unique index idx_filesystem_relation_relation_id on filesystem_relation (
 -- but this implies that an entry cannot appear twice in a playlist?!
 create unique index idx_filesystem_relation_child_parent_id on filesystem_relation (relation_type,parent_id,child_id);
 
+create table filesystem_collection (
+      collection_json      varchar(65520) not null default '{}'
+    , collection_id        generated always as (json_extract(collection_json, '$.collection_id'))
+    , collection_type      generated always as (json_extract(collection_json, '$.collection_type')) -- 'directory', 'album', ???
+    , parent_id generated always as (json_extract(collection_json, '$.parent_id'))
+    , title              generated always as (json_extract(collection_json, '$.title'))         
+    , image              generated always as (json_extract(collection_json, '$.image'))        
+);
+
 -- full text search
 CREATE VIRTUAL TABLE filesystem_entry_fts5
     USING fts5(content, title, "language" UNINDEXED, entry_id UNINDEXED, tokenize="perl 'Filesys::DB::FTS::Tokenizer::locale_tika_tokenizer'")
