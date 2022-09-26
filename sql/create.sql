@@ -69,6 +69,7 @@ create table filesystem_collection (
     , title              generated always as (json_extract(collection_json, '$.title'))         
     , image              generated always as (json_extract(collection_json, '$.image'))        
 );
+create unique index idx_filesystem_collection_collection_id on filesystem_collection (collection_id);
 
 -- full text search
 CREATE VIRTUAL TABLE filesystem_entry_fts5

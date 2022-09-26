@@ -324,7 +324,7 @@ sub insert_or_update_collection( $self, $info ) {
     my $res = $self->selectall_named(<<'SQL', $value );
         insert into filesystem_collection (collection_json)
         values (:value)
-        on conflict(collection_type,collection_id) do
+        on conflict(collection_id) do
         update set collection_json = :value
         returning collection_id
 SQL
