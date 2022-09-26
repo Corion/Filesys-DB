@@ -217,21 +217,24 @@ sub extract_content_via_tika( $info ) {
     my $filename = $info->{filename};
 
     state $tika //= do {
-        my $t = Apache::Tika::Server->new(
+        my $t = eval {
+                    Apache::Tika::Server->new(
             jarfile => '/home/corion/Projekte/Apache-Tika-Async/jar/tika-server-standard-2.3.0.jar',
-        );
-        $t->launch;
-        $t
+            );}
+        eval { $t->launch; }
+        ! $@ and $t
     };
-    my $pdf_info = $tika->get_all( $filename );
-    if( $pdf_info->meta->{'meta:language'} =~ /^(de|en|fr|zh)$/ ) {
-        # I don't expect other languages, except for misdetections
-        $info->{language} = $pdf_info->meta->{'meta:language'};
-    }
-    $info->{content}->{title} = $pdf_info->meta->{'dc:title'};
-    $info->{content}->{html} = $pdf_info->content();
+    if($tika) {
+        my $pdf_info = $tika->get_all( $filename );
+        if( $pdf_info->meta->{'meta:language'} =~ /^(de|en|fr|zh)$/ ) {
+            # I don't expect other languages, except for misdetections
+            $info->{language} = $pdf_info->meta->{'meta:language'};
+        }
+        $info->{content}->{title} = $pdf_info->meta->{'dc:title'};
+        $info->{content}->{html} = $pdf_info->content();
 
-    return 1;
+        return 1;
+    } else { return 0 }
 }
 
 sub extract_content_via_audio_tag( $info ) {
@@ -396,16 +399,22 @@ if( $action eq 'scan') {
                 $info = update_properties( $info );
     
                 # We also want to create a relation here, with our parent directory?!
+                # We also want to create a collection here, with our parent directory?!
                 # We have that information in context->{parent}
                 if( defined $context->{parent}) {
                     # This should always exist since we scan and create directories
                     # before scanning and creating their contents
                     my $parent = $store->find_direntry_by_filename( $context->{parent});
     
-                    my $relation = $store->insert_or_update_relation({
+                    #my $relation = $store->insert_or_update_relation({
+                        #parent_id => $parent->{entry_id},
+                        #child_id  => $info->{entry_id},
+                        #relation_type => 'directory',
+                    #});
+                    my $collection = $store->insert_or_update_collection({
                         parent_id => $parent->{entry_id},
-                        child_id  => $info->{entry_id},
-                        relation_type => 'directory',
+                        collection_type => 'directory',
+                        title => basename($parent->{filename}),
                     });
                 }
             }
