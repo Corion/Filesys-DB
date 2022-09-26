@@ -1,6 +1,7 @@
 package Filesys::Notify::Watcher;
 use 5.020;
 use File::ChangeNotify;
+use Moo 2;
 
 use feature 'signatures';
 no warnings 'experimental::signatures';
@@ -20,9 +21,7 @@ use Thread::Queue;
 sub BUILD($self, $args) {
     if( my $dirs = delete $args->{directory}) {
         $dirs = [$dirs] if ! ref $dirs;
-        for my $d (@$dirs) {
-            $self->watch_directory( path => $d );
-        }
+        $self->watch_directory( path => $dirs );
     }
 }
 
@@ -49,21 +48,24 @@ has 'queue' => (
     default => sub { Thread::Queue->new() },
 );
 
+has 'thread' => (
+    is => 'rw',
+);
 
-sub _watcher($path,$subtree,$queue) {
+sub _watcher($paths,$subtree,$queue) {
     my $running = 1;
-    my $w = File::ChangeNotify->instantiate_watcher(directories => [$path]);
+    my $w = File::ChangeNotify->instantiate_watcher(directories => $paths);
     state %translate = (
         create => 'added',
         modify => 'modified',
         delete => 'removed',
         unknown => 'unknown',
     );
-local $SIG{KILL}=sub{threads->exit};
+    local $SIG{KILL}=sub{$running=0; threads->exit};
     while($running) {
         my @events = $w->wait_for_events;
 
-        for my $e (@events) {
+        for my $ev (@events) {
             my $i = {
                 path   => $ev->path,
                 action => $translate{ $ev->type },
@@ -82,6 +84,26 @@ sub build_watcher( $self, %options ) {
     return { thread => $thr };
 }
 
+sub stop_watcher($self) {
+    if( my $t = $self->thread) {
+        my $thr = $t->{thread};
+        eval { $thr->kill('KILL'); $thr->detach; }; # sometimes the thread is not yet joinable?!
+        $self->thread(undef);
+    }
+}
+
+sub restart_watcher($self, %options) {
+    $self->stop_watcher();
+    my $d = [keys %{$self->watchers}];
+    if(@$d) {
+    $self->thread( $self->build_watcher(
+        queue => $self->queue,
+        path => [keys %{$self->watchers}],
+        %options
+    ));
+    }
+}
+
 =head2 C<< ->watch_directory >>
 
   $w->watch_directory( path => $dir, subtree => 1 );
@@ -92,14 +114,9 @@ Add a directory to the list of watched directories.
 
 sub watch_directory( $self, %options ) {
     my $dir = delete $options{ path };
-    if( $self->watchers->{$dir}) {
-        $self->unwatch_directory( path => $dir );
-    }
-    $self->watchers->{ $dir } = $self->build_watcher(
-        queue => $self->queue,
-        path => $dir,
-        %options
-    );
+    $dir = [$dir] if !ref $dir;
+    $self->watchers->{ $_ } = 1 for @$dir;
+    $self->restart_watcher();
 }
 
 =head2 C<< ->unwatch_directory >>
@@ -113,19 +130,13 @@ come in some events stored for that directory previously in the queue.
 
 sub unwatch_directory( $self, %options ) {
     my $dir = delete $options{ path };
-    if( my $t = delete $self->watchers->{ $dir }) {
-        my $thr = delete $t->{thread};
-        $thr->kill('KILL');
-        eval { $thr->join; }; # sometimes the thread is not yet joinable?!
-    }
+    $dir = [$dir] if !ref $dir;
+    delete $self->watchers->{ $_ } for @$dir;
+    $self->restart_watcher();
 }
 
 sub DESTROY($self) {
-    if( my $w = $self->{watchers}) {
-        for my $t (keys %$w) {
-            $self->unwatch_directory( path => $t )
-        }
-    };
+    $self->stop_watcher();
 }
 
 =head2 C<< ->wait $CB >>
@@ -144,3 +155,14 @@ sub wait( $self, $cb) {
     while( 1 ) {
         my @events = $self->queue->dequeue;
         for (@events) {
+            if( defined $_ ) {
+                $cb->($_);
+            } else {
+                # somebody did ->queue->enqueue(undef) to stop us
+                last;
+            }
+        };
+    };
+}
+
+1;
