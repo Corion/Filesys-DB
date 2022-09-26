@@ -24,6 +24,8 @@ requires 'MIME::Detect' => '0';
 requires 'Music::Tag' => '0';
 requires 'Apache::Tika::Server' => '0';
 
+requires 'File::ChangeNotify' => '0';
+
 requires 'Lingua::Stem::Cistem'; # for German
 requires 'Lingua::Stem'; # for others
 

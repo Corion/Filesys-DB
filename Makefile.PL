@@ -74,7 +74,10 @@ my %module = (
         'Music::Tag'           => 0,
         'Apache::Tika::Server' => 0,
 
+        'File::ChangeNotify'   => 0,
+
         'Lingua::Stem::Cistem' => 0, # for German
+        'Lingua::Stem' => 0, # for the rest
 
     },
     TEST_REQUIRES => {
