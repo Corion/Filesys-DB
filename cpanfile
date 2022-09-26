@@ -6,6 +6,7 @@ requires 'JSON';
 requires 'JSON::Path';
 requires 'YAML';
 requires 'PerlX::Maybe';
+requires 'threads';
 
 requires 'Filter::signatures';
 requires 'Carp';

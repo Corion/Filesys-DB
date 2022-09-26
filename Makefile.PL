@@ -59,6 +59,7 @@ my %module = (
         'JSON::Path'           => 0,
         'YAML'                 => 0,
         'PerlX::Maybe'         => 0,
+        'threads'              => 0,
 
         # 'Filter::signatures'        => '0.09',
         'Carp'                      => 0,
