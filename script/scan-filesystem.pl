@@ -326,7 +326,7 @@ sub update_properties( $info, %options ) {
     my @updaters = _applicable_properties( \%file_properties, $info, \%options );
     for my $up (@updaters) {
         my( $vis, $cb ) = @$up;
-        status( sprintf "% 16s | %s", $vis, $info->{filename});
+        status( sprintf "% 8s | %s", $vis, $info->{filename});
         if( $cb->($info)) {
             $info->{last_scanned} = timestamp;
         };
@@ -336,7 +336,7 @@ sub update_properties( $info, %options ) {
     # If we changed anything, update the database:
 
     if( $info->{last_scanned} ne $last_ts ) {
-        #msg( sprintf "% 16s | %s", 'update', $file);
+        #msg( sprintf "% 8s | %s", 'update', $file);
         $info = do_update($info);
     }
     return $info
@@ -427,14 +427,14 @@ if( $action eq 'scan') {
                 $info = do_update($info);
             };
 
-            status( sprintf "% 16s | %s", 'scan', $directory);
+            status( sprintf "% 8s | %s", 'scan', $directory);
             return 1
         },
     );
 } elsif( $action eq 'rescan' ) {
     @ARGV = '1=1' unless @ARGV;
     my $where = join " ", @ARGV;
-    status( sprintf "% 16s | %s", 'rescan', $where);
+    status( sprintf "% 8s | %s", 'rescan', $where);
     scan_tree_db(
         file => sub( $info, $context ) {
             # do a liveness check? and potentially delete the file entry
@@ -461,7 +461,7 @@ if( $action eq 'scan') {
     );
 } elsif ($action eq 'watch' ) {
     my $watcher = Filesys::DB::Watcher->new(store => $store);
-    status( sprintf "% 16s | %s", 'idle', "");
+    status( sprintf "% 8s | %s", 'idle', "");
     # Can we / do we want to debounce this? While a file is copied, we will
     # also start to scan it, which is not great. But waiting a second for things to
     # settle down also means some async behaviour, which isn't great either
@@ -503,7 +503,7 @@ if( $action eq 'scan') {
             $info->{filename} = $ev->{new_name};
             $info = update_properties( $info, force => 1 );
         }
-        status( sprintf "% 16s | %s", 'idle', "");
+        status( sprintf "% 8s | %s", 'idle', "");
     });
 }
 
