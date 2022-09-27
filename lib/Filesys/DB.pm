@@ -315,23 +315,36 @@ sub insert_or_update_relation( $self, $info ) {
         update set relation_json = :value
         returning relation_id
 SQL
-    $info->{relation_id} = $res;
+    $info->{relation_id} = $res->{relation_id};
     return $info
 }
 
 sub insert_or_update_collection( $self, $info ) {
     my $value = encode_json( $info );
-    my $res = $self->selectall_named(<<'SQL', $value );
-        insert into filesystem_collection (collection_json)
-        values (:value)
+    my $collection_id = $info->{collection_id};
+    my $res = $self->selectall_named(<<'SQL', $collection_id, $value );
+        insert into filesystem_collection (collection_id, collection_json)
+        values (:collection_id, :value)
         on conflict(collection_id) do
         update set collection_json = :value
         returning collection_id
 SQL
-    $info->{collection_id} = $res;
+    $info->{collection_id} = $res->[0]->{collection_id};
     return $info
 }
 
+sub insert_or_update_membership( $self, $info ) {
+    my $value = encode_json( $info );
+    croak "Need a collection" unless $info->{collection_id};
+    my $res = $self->selectall_named(<<'SQL', $value );
+        insert into filesystem_membership (membership_json)
+        values (:value)
+        on conflict(collection_id, entry_id) do
+        update set membership_json = :value
+        returning collection_id, entry_id
+SQL
+    return $info
+}
 
 sub _inflate_entry( $self, $entry ) {
     # Downgrade the string again:

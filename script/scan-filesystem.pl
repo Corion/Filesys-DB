@@ -414,7 +414,12 @@ if( $action eq 'scan') {
                     my $collection = $store->insert_or_update_collection({
                         parent_id => $parent->{entry_id},
                         collection_type => 'directory',
-                        title => basename($parent->{filename}),
+                        title => $parent->{title} // basename($parent->{filename}),
+                    });
+                    my $membership = $store->insert_or_update_membership({
+                        collection_id => $collection->{collection_id},
+                        entry_id => $info->{entry_id},
+                        position => undef,
                     });
                 }
             }

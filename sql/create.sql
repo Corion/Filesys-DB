@@ -63,7 +63,7 @@ create unique index idx_filesystem_relation_child_parent_id on filesystem_relati
 
 create table filesystem_collection (
       collection_json      varchar(65520) not null default '{}'
-    , collection_id        generated always as (json_extract(collection_json, '$.collection_id'))
+    , collection_id        integer primary key not null
     , collection_type      generated always as (json_extract(collection_json, '$.collection_type')) -- 'directory', 'album', ???
     , parent_id generated always as (json_extract(collection_json, '$.parent_id'))
     , title              generated always as (json_extract(collection_json, '$.title'))         
@@ -71,6 +71,13 @@ create table filesystem_collection (
 );
 create unique index idx_filesystem_collection_collection_id on filesystem_collection (collection_id);
 
+create table filesystem_membership (
+      membership_json      varchar(65520) not null default '{}'
+    , collection_id        generated always as (json_extract(membership_json, '$.collection_id'))
+    , entry_id             generated always as (json_extract(membership_json, '$.entry_id'))
+    , position             generated always as (json_extract(membership_json, '$.position'))
+);
+create unique index idx_filesystem_membership_collection_id_entry_id on filesystem_membership (collection_id, entry_id);
 -- full text search
 CREATE VIRTUAL TABLE filesystem_entry_fts5
     USING fts5(content, title, "language" UNINDEXED, entry_id UNINDEXED, tokenize="perl 'Filesys::DB::FTS::Tokenizer::locale_tika_tokenizer'")
