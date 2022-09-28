@@ -304,7 +304,7 @@ our %file_properties = (
 );
 
 sub keep_fs_entry( $name ) {
-    if( $name =~ m![/\\](?:(?:\.(git|cvs|config|DS_Store))|__MACOSX|Thumbs.db)\z!i) {
+    if( $name =~ m![/\\](?:(?:\.(git|cvs|config|DS_Store))|__MACOSX|Thumbs.db|\.tmp)\z!i) {
         # msg("Skipping '$name'");
         return undef
     }
