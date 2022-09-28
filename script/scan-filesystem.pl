@@ -517,6 +517,7 @@ if( $action eq 'scan') {
 # [ ] gradual updater that doesn't scan the filesystem but only scans for
 #     missing properties - this is maybe a separate program?
 # [ ] Make the skip list configurable, and/or hide them by a special entry
+# [ ] RSS generation as use case?!
 # [ ] Add handler for YAML and Markdown files, extracting (for example) the title
 #     Also, for anything else containing frontmatter ...
 # [ ] (Video) thumbnail generation? using ffmpeg
@@ -525,10 +526,12 @@ if( $action eq 'scan') {
 #     means finding two relatively prime numbers, one the frequency and one the
 #     maximum expected staleness, and scanning all files with
 #               entry_id % (count/(frequency*staleness)) = time()/frequency
-# [ ] Watch for changes to mountpoints or stuff below them, and automatically
+# [.] Watch for changes to mountpoints or stuff below them, and automatically
 #     update the database from that - Win32::ChangeNotify and/or inotify2,
 #     and/or File::ChangeNotify::Simple
 #     - [x] This now exists for Win32
+#     - [x] This now exists for other systems, but untested
 # [ ] maybe also be "reactive" and issue events
 #     based on those changes? Or, alternatively, have SQLite be such an event
 #     queue, as we have timestamps and thus can even replay events
+# [ ] store/queud fs events in a table ao other programs can catch up?! what for?
