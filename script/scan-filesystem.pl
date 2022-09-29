@@ -512,12 +512,19 @@ if( $action eq 'scan') {
     });
 }
 
+# [ ] discriminate between "empty title", "no title" and  "not checked for title"
+#   - empty: ""
+#   - no title: null
+#   - not chexked: key does not exist, column value still null...
 # [ ] add "ephemeral" or "auxiliary" file/entry type, for thumbnails and other
 #     stuff that is generated of a different source file
 # [ ] gradual updater that doesn't scan the filesystem but only scans for
 #     missing properties - this is maybe a separate program?
 # [ ] Make the skip list configurable, and/or hide them by a special entry
-# [ ] RSS generation as use case?!
+# use cases
+# - [ ] loupilot album view
+# - [ ] RSS generation?!
+# - [ ] Image gallery/photostream
 # [ ] Add handler for YAML and Markdown files, extracting (for example) the title
 #     Also, for anything else containing frontmatter ...
 # [ ] (Video) thumbnail generation? using ffmpeg
