@@ -3,6 +3,15 @@ use strict;
 use 5.010;
 use Test::More;
 
+use Config;
+
+BEGIN {
+    if( $^O ne 'MSWin32' ) {
+        plan skip_all => "This module only works on Windows";
+        exit;
+    };
+};
+
 use Filesys::Notify::Win32::ReadDirectoryChanges;
 use File::Temp 'tempfile';
 use File::Basename;
