@@ -35,8 +35,8 @@ sub watch_win32( $self, %options ) {
 }
 
 sub watch_changenotify( $self, %options ) {
-    require Filesys::Watcher::Notify;
-    my $w = Filesys::Watcher::Notify->new(subtree => 1);
+    require Filesys::Notify::Watcher;
+    my $w = Filesys::Notify::Watcher->new(subtree => 1);
     for my $mp (@{ $self->mountpoints }) {
         $w->watch_directory( path => $self->store->to_local($mp,''));
     };
