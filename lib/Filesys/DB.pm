@@ -325,7 +325,7 @@ sub insert_or_update_collection( $self, $info ) {
     my $collection_id = $info->{collection_id};
 
     my $res;
-    if( ! $collection_id and $collection->{collection_type} eq 'directory' ) {
+    if( ! $collection_id and $info->{collection_type} eq 'directory' ) {
         $res = $self->selectall_named(<<'SQL', $collection_id, $value );
             insert into filesystem_collection (collection_id, collection_json)
             values (:collection_id, :value)
