@@ -1,10 +1,11 @@
 .gitignore
 Changes
 cpanfile
-filesys-db.yaml
+example/filesys-db.yaml
 lib/Filesys/DB.pm
 lib/Filesys/DB/FTS/Tokenizer.pm
 lib/Filesys/DB/Watcher.pm
+lib/Filesys/Notify/Watcher.pm
 lib/Filesys/TreeWalker.pm
 LICENSE
 Makefile.PL
@@ -27,10 +28,12 @@ script/rescan.pl
 script/scan-filesystem.pl
 script/watch-filesystem.pl
 sql/create.sql
+sql/views.sql
 t/00-load.t
 t/01-double-insert-identity.t
 t/01-filename-encoding.t
 t/02-watcher-readdirectorychanges.t
+t/03-notify-changes.t
 testrules.yml
 xt/99-changes.t
 xt/99-compile.t

@@ -1,10 +1,12 @@
 ^\.git\/
 ^db/
 maint
+^filesys-db.yaml$
 ^tags$
 .last_cover_stats
 .travis.yml
 .prove
+.carmel
 .appveyor.yml
 ^\.github
 Makefile$
