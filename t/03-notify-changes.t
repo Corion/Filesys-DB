@@ -25,6 +25,7 @@ sub do_stuff {
     my $rename_target = $tempname3 . '.' . $$ . '.tmp';
 
     my $t = async {
+sleep 1;
         note "Temp name 2: $tempname2";
         open $fh2, '>', $tempname2;
 
