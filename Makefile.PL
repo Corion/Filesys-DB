@@ -17,6 +17,11 @@ my $distlink = $distbase;
 
 my @tests = map { glob $_ } 't/*.t', 't/*/*.t';
 
+my @win32_modules;
+if( $^O eq 'MSWin32') {
+    push @win32_modules, 'Filesys::Notify::Win32::ReadDirectoryChanges' => 0;
+}
+
 my %module = (
     NAME                => $module,
     AUTHOR              => q{Max Maischein <corion@cpan.org>},
@@ -36,8 +41,8 @@ my %module = (
             },
             license    => "https://dev.perl.org/licenses/",
         },
-        dynamic_config   => 0, # we promise to keep META.* up-to-date
-        x_static_install => 1, # we are pure Perl and don't do anything fancy
+        dynamic_config   => 1, # we have optional Win32 prerequisites
+        x_static_install => 0, # we have optional Win32 prerequisites
     },
 
     MIN_PERL_VERSION => '5.020', # I use signatures
@@ -59,7 +64,8 @@ my %module = (
         'JSON::Path'           => 0,
         'YAML'                 => 0,
         'PerlX::Maybe'         => 0,
-        'threads'              => 0,
+
+        @win32_modules,
 
         # 'Filter::signatures'        => '0.09',
         'Carp'                      => 0,
@@ -79,6 +85,7 @@ my %module = (
 
         'Lingua::Stem::Cistem' => 0, # for German
         'Lingua::Stem' => 0, # for the rest
+
 
     },
     TEST_REQUIRES => {
