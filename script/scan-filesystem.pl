@@ -323,14 +323,22 @@ sub update_properties( $info, %options ) {
     my $last_ts = $info->{last_scanned} // '';
 
     # This would be a kind of plugin system, maybe?!
-    my @updaters = _applicable_properties( \%file_properties, $info, \%options );
-    for my $up (@updaters) {
-        my( $vis, $cb ) = @$up;
-        status( sprintf "% 8s | %s", $vis, $info->{filename});
-        if( $cb->($info)) {
-            $info->{last_scanned} = timestamp;
-        };
+    my $do_scan;
+
+    if( exists $options{ context }) {
+        $do_scan = $options{ context }->{stat}->[9] > $info->{last_scanned}
     };
+
+    if( $do_scan ) {
+        my @updaters = _applicable_properties( \%file_properties, $info, \%options );
+        for my $up (@updaters) {
+            my( $vis, $cb ) = @$up;
+            status( sprintf "% 8s | %s", $vis, $info->{filename});
+            if( $cb->($info)) {
+                $info->{last_scanned} = timestamp;
+            };
+        };
+    }
 
     # the same for other fields:
     # If we changed anything, update the database:
@@ -394,10 +402,10 @@ if( $action eq 'scan') {
                 $info = basic_direntry_info($file,$context, { entry_type => 'file' });
                 $info = do_update( $info );
             };
-            
+
             if( ! $dry_run ) {
-                $info = update_properties( $info );
-    
+                $info = update_properties( $info, context => $context );
+
                 # We also want to create a relation here, with our parent directory?!
                 # We also want to create a collection here, with our parent directory?!
                 # We have that information in context->{parent}
@@ -405,7 +413,7 @@ if( $action eq 'scan') {
                     # This should always exist since we scan and create directories
                     # before scanning and creating their contents
                     my $parent = $store->find_direntry_by_filename( $context->{parent});
-    
+
                     #my $relation = $store->insert_or_update_relation({
                         #parent_id => $parent->{entry_id},
                         #child_id  => $info->{entry_id},
@@ -451,7 +459,7 @@ if( $action eq 'scan') {
                 # Maybe we would want to mark it as orphaned instead?!
             } else {
                 if( ! $dry_run ) {
-                    $info = update_properties( $info, force => 1 );
+                    $info = update_properties( $info, force => 1, context => $context );
                 };
             }
         },
@@ -460,7 +468,7 @@ if( $action eq 'scan') {
                 do_delete({ filename => $info->{filename}});
             };
             return 1
-            
+
         },
         where => $where,
     );
@@ -494,7 +502,7 @@ if( $action eq 'scan') {
             # but starting right now will mean outdated information?!
             # This will skip/ignore zero-size files...
             return unless -s $file;
-            
+
             my $info = $store->find_direntry_by_filename( $file );
             $info = update_properties( $info, force => 1 );
 
