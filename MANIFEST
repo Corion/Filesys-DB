@@ -5,7 +5,6 @@ filesys-db.yaml
 lib/Filesys/DB.pm
 lib/Filesys/DB/FTS/Tokenizer.pm
 lib/Filesys/DB/Watcher.pm
-lib/Filesys/Notify/Win32/ReadDirectoryChanges.pm
 lib/Filesys/TreeWalker.pm
 LICENSE
 Makefile.PL
