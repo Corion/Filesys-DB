@@ -66,10 +66,11 @@ create table filesystem_collection (
     , collection_id        integer primary key not null
     , collection_type      generated always as (json_extract(collection_json, '$.collection_type')) -- 'directory', 'album', ???
     , parent_id generated always as (json_extract(collection_json, '$.parent_id'))
-    , title              generated always as (json_extract(collection_json, '$.title'))         
-    , image              generated always as (json_extract(collection_json, '$.image'))        
+    , title              generated always as (json_extract(collection_json, '$.title'))
+    , image              generated always as (json_extract(collection_json, '$.image'))
 );
 create unique index idx_filesystem_collection_collection_id on filesystem_collection (collection_id);
+create unique index idx_filesystem_collection_directory_parent_id on filesystem_collection (collection_type,parent_id);
 
 create table filesystem_membership (
       membership_json      varchar(65520) not null default '{}'

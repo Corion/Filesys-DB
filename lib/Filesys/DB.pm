@@ -217,6 +217,7 @@ sub to_local( $self, $mountpoint, $filename ) {
     if( ! exists $self->mountpoints->{ $mountpoint }) {
         croak "Unknown mountpoint '$mountpoint'";
     }
+
     # XXX make this FS dependent, don't blindly use '/'
     # XXX Also, don't assume that mountpoints are in UTF-8 (but that's what YAML gives us)
     return encode('UTF-8', $self->mountpoints->{ $mountpoint }->{directory}) . '/' . $filename;
@@ -284,7 +285,7 @@ sub delete_direntry( $self, $info ) {
     if( defined $info->{entry_id}) {
         my $entry_id = $info->{entry_id};
         my $tmp_res = $self->selectall_named(<<'SQL', $entry_id )->[0];
-            delete from filesystem_entry 
+            delete from filesystem_entry
             where entry_id=:entry_id
             returning entry_id
 SQL
@@ -294,7 +295,7 @@ SQL
         # $info->{filename} must exist
         my $filename = $info->{filename};
         my $tmp_res = $self->selectall_named(<<'SQL', $mountpoint, $filename );
-            delete from filesystem_entry 
+            delete from filesystem_entry
             where mountpoint=:mountpoint
               and filename=:filename
             returning entry_id
@@ -322,13 +323,26 @@ SQL
 sub insert_or_update_collection( $self, $info ) {
     my $value = encode_json( $info );
     my $collection_id = $info->{collection_id};
-    my $res = $self->selectall_named(<<'SQL', $collection_id, $value );
-        insert into filesystem_collection (collection_id, collection_json)
-        values (:collection_id, :value)
-        on conflict(collection_id) do
-        update set collection_json = :value
-        returning collection_id
+
+    my $res;
+    if( ! $collection_id and $collection->{collection_type} eq 'directory' ) {
+        $res = $self->selectall_named(<<'SQL', $collection_id, $value );
+            insert into filesystem_collection (collection_id, collection_json)
+            values (:collection_id, :value)
+            on conflict(collection_type, parent_id) do
+            update set collection_json = :value
+            returning collection_id
 SQL
+    } else {
+
+        $res = $self->selectall_named(<<'SQL', $collection_id, $value );
+            insert into filesystem_collection (collection_id, collection_json)
+            values (:collection_id, :value)
+            on conflict(collection_id) do
+            update set collection_json = :value
+            returning collection_id
+SQL
+    }
     $info->{collection_id} = $res->[0]->{collection_id};
     return $info
 }
