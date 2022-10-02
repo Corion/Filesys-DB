@@ -326,7 +326,7 @@ sub update_properties( $info, %options ) {
     my $do_scan;
 
     if( exists $options{ context }) {
-        $do_scan = $options{ context }->{stat}->[9] > $info->{last_scanned}
+        $do_scan = timestamp($options{ context }->{stat}->[9]) gt $info->{last_scanned};
     };
 
     if( $do_scan ) {
