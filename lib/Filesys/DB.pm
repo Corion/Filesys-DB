@@ -428,7 +428,6 @@ SQL
     return $invalid_mountpoint
 }
 
-# No prototype since we want to capture the variables passed in:
 sub entries_ex( $self, %options ) {
     $options{ level } //= 0;
     $options{ level } += 2;
@@ -446,6 +445,7 @@ sub entries_ex( $self, %options ) {
        order by mtime desc
 SQL
 }
+
 # No prototype since we want to capture the variables passed in:
 sub entries {
     my( $self, $columns, $where ) = splice @_,0,3;
