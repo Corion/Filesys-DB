@@ -8,20 +8,30 @@ use PerlX::Maybe;
 
 our $order_by='';
 our $direction='';
+our $output_format;
 GetOptions(
     'mountpoint|m=s' => \my $mountpoint,
     'alias|a=s' => \my $mount_alias,
     'config|f=s' => \my $config_file,
     'columns|c=s' => \my @columns,
+    'output-format=s' => \$output_format,
 
     # ls options
     't' => sub { $order_by = 'mtime' },
     'r' => sub { $direction = 'desc' },
+    'print0' => sub { $\ = "\0"; $output_format = 'plain' },
 );
 
 $order_by //= 'entry_id';
 
-@columns = 'filename' unless @columns;
+if( ! -t STDOUT) {
+    $output_format //= 'plain';
+    @columns = ('mountpoint','filename') unless @columns;
+}
+
+$output_format //= 'table';
+
+@columns = ('mountpoint', 'filename') unless @columns;
 my $sql = join " ", @ARGV;
 
 if( $order_by ) {
@@ -59,6 +69,13 @@ my $store = Filesys::DB->new(
     },
 );
 
-print DBIx::RunSQL->format_results(
-    sth => $store->entries( \@columns, $sql),
-);
+if( $output_format eq 'table' ) {
+    print DBIx::RunSQL->format_results(
+        sth => $store->entries( \@columns, $sql),
+    );
+} else {
+    use File::Basename;
+    print dirname($_),"\0"
+        for map { $store->_inflate_filename($_->{mountpoint}, $_->{filename}) }
+            @{ $store->entries( \@columns, $sql)->fetchall_arrayref({}) };
+}
