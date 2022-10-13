@@ -360,17 +360,18 @@ SQL
     return $info
 }
 
+sub _inflate_filename( $self, $mountpoint, $filename ) {
+    _utf8_off($filename); # a filename is octets, not UTF-8
+    $filename = decode( 'UTF-8',   $filename); # really?!
+    $filename = encode( 'Latin-1', $filename); # really?! Convert back to "octets"
+    _utf8_off($filename); # a filename is octets, not UTF-8
+    return $self->to_local($mountpoint, $filename);
+}
+
 sub _inflate_entry( $self, $entry ) {
     # Downgrade the string again:
     my $res = decode_json( $entry->{entry_json} );
-
-    # The filename comes back as an UTF-8 string, but we want to
-    # get at the original octets that we originally stored:
-    _utf8_off($res->{filename}); # a filename is octets, not UTF-8
-    $res->{filename} = decode( 'UTF-8', $res->{filename}); # really?!
-    $res->{filename} = encode( 'Latin-1', $res->{filename}); # really?! Convert back to "octets"
-    _utf8_off($res->{filename}); # a filename is octets, not UTF-8
-    $res->{filename} = $self->to_local($res->{mountpoint}, $res->{filename});
+    $res->{filename} = $self->_inflate_filename( $res->{mountpoint}, $res->{filename});
     $res->{entry_id} = $entry->{entry_id};
     return $res
 }
