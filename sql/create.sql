@@ -15,24 +15,24 @@ create table filesystem_entry (
 
       -- should we really constrain the filename to be not null? What about
       -- emails and other documents stored elsewhere? Archive files?
-    , mountpoint   generated always as (json_extract(entry_json, '$.mountpoint'))
-    , filename     generated always as (json_extract(entry_json, '$.filename'))
-    , mtime        generated always as (json_extract(entry_json, '$.mtime'))
-    , filesize     generated always as (json_extract(entry_json, '$.filesize'))
-    , sha256       generated always as (json_extract(entry_json, '$.sha256'))
-    , mime_type    generated always as (json_extract(entry_json, '$.mime_type'))
-    , entry_type   generated always as (json_extract(entry_json, '$.entry_type')) -- 'file', 'directory', 'link' maybe?
+    , mountpoint   generated always as (json_extract(entry_json, '$.mountpoint')) stored
+    , filename     generated always as (json_extract(entry_json, '$.filename'))   stored
+    , mtime        generated always as (json_extract(entry_json, '$.mtime'))      stored
+    , filesize     generated always as (json_extract(entry_json, '$.filesize'))   stored
+    , sha256       generated always as (json_extract(entry_json, '$.sha256'))     stored
+    , mime_type    generated always as (json_extract(entry_json, '$.mime_type'))  stored
+    , entry_type   generated always as (json_extract(entry_json, '$.entry_type')) stored
 
       -- these are all unversioned in the sense that an update of the extractor
       -- mechanism won't update these
       -- also we should have metadata like "last updated" etc?
       -- or do we want all of this in another table?!
-    , title        generated always as (json_extract(entry_json, '$.content.title'))
-    , duration     generated always as (json_extract(entry_json, '$.content.duration'))
-    , html         generated always as (json_extract(entry_json, '$.content.html'))
-    , "text"       generated always as (json_extract(entry_json, '$.content.text'))
-    , "language"   generated always as (json_extract(entry_json, '$.content.language'))
-    , thumbnail    generated always as (json_extract(entry_json, '$.preview.thumbnail'))
+    , title        generated always as (json_extract(entry_json, '$.content.title'))     stored
+    , duration     generated always as (json_extract(entry_json, '$.content.duration'))  stored
+    , html         generated always as (json_extract(entry_json, '$.content.html'))      stored
+    , "text"       generated always as (json_extract(entry_json, '$.content.text'))      stored
+    , "language"   generated always as (json_extract(entry_json, '$.content.language'))  stored
+    , thumbnail    generated always as (json_extract(entry_json, '$.preview.thumbnail')) stored
     -- add image dimensions too
 );
 create unique index idx_filesystem_entry_entry_id on filesystem_entry (entry_id);
