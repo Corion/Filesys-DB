@@ -403,13 +403,13 @@ sub do_rescan( @sql ) {
             # also, have a dry-run option, just listing the files out of date?!
             if( ! -e $info->{filename}) {
 
-                my @parents = $store->find_relations_by_type_child( 'directory', $info->{entry_id} );
+                my $parents = $store->find_memberships_by_type_child( 'directory', $info->{entry_id} );
                 use Data::Dumper;
-                die Dumper \@parents;
-
-                for my $p (@parents) {
-                    $rescan_parents{ $p->{parent_id } } = 1;
-                };
+                die Dumper $parents;
+                #
+                #for my $p ($parents->@*) {
+                #    $rescan_parents{ $p->{parent_id } } = 1;
+                #};
 
                 do_delete({ filename => $info->{filename}});
                 # This blows away all other data, like tags, etc. as well.

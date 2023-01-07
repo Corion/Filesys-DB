@@ -320,6 +320,17 @@ SQL
     return $info
 }
 
+sub find_memberships_by_type_child( $self, $collection_type, $entry_id ) {
+    my $res = $self->selectall_named(<<'SQL', $collection_type, $entry_id );
+      select c.collection_id
+        from filesystem_membership m
+        join filesystem_collection c on m.collection_id = c.collection_id
+        where c.collection_type = :collection_type
+          and entry_id          = :entry_id
+SQL
+    return $res
+}
+
 sub insert_or_update_collection( $self, $info ) {
     my $value = encode_json( $info );
     my $collection_id = $info->{collection_id};
