@@ -8,8 +8,8 @@ no warnings 'experimental::signatures';
 use PerlX::Maybe;
 
 use Filesys::DB;
-use Filesys::TreeWalker 'scan_tree_bf';
 use Filesys::DB::Watcher;
+use Filesys::DB::Operation;
 
 use Carp 'croak';
 use Getopt::Long;
@@ -66,16 +66,6 @@ if( $mount_alias && !@ARGV ) {
 
 # We want a breadth-first FS scan, preferring the most recent entries
 # over older entries (as we assume that old entries don't change much)
-
-sub basic_direntry_info( $ent, $context, $defaults ) {
-    $context //= { stat => [stat($ent)] };
-    return {
-        %$defaults,
-        filename => $ent,
-        mtime    => $context->{stat}->[9],
-        filesize => -s $ent,
-    }
-}
 
 sub timestamp($ts=time) {
     return strftime '%Y-%m-%dT%H:%M:%SZ', gmtime($ts)
@@ -303,22 +293,6 @@ our %file_properties = (
     },
 );
 
-sub keep_fs_entry( $name ) {
-    if( $name =~ m![/\\](?:(?:\.(git|cvs|config|DS_Store))|__MACOSX|Thumbs.db|\.tmp)\z!i) {
-        # msg("Skipping '$name'");
-        return undef
-    }
-
-    my ($mp,$fn) = $store->to_alias( $name );
-    my $skip = $store->mountpoints->{$mp};
-    if( grep { index( $_, $name ) == 0 } @{ $skip->{'skip-index'} || []}) {
-        # msg("Skipping '$name'");
-        return undef
-    }
-
-    1
-}
-
 sub update_properties( $info, %options ) {
     my $last_ts = $info->{last_scanned} // '';
 
@@ -391,57 +365,12 @@ sub do_update( $info, %options ) {
 };
 
 sub do_scan( @directories ) {
-    # Maybe we want to preseed with DB results so that we get unscanned directories
-    # first, or empty directories ?!
-    scan_tree_bf(
-        wanted => \&keep_fs_entry,
-        queue => \@directories,
-        file => sub($file,$context) {
-            my $info = $store->find_direntry_by_filename( $file );
-            if( ! $info) {
-                $info = basic_direntry_info($file,$context, { entry_type => 'file' });
-                $info = do_update( $info );
-            };
-
-            if( ! $dry_run ) {
-                $info = update_properties( $info, context => $context );
-
-                # We also want to create a relation here, with our parent directory?!
-                # We also want to create a collection here, with our parent directory?!
-                # We have that information in context->{parent}
-                if( defined $context->{parent}) {
-                    # This should always exist since we scan and create directories
-                    # before scanning and creating their contents
-                    my $parent = $store->find_direntry_by_filename( $context->{parent});
-
-                    #my $relation = $store->insert_or_update_relation({
-                        #parent_id => $parent->{entry_id},
-                        #child_id  => $info->{entry_id},
-                        #relation_type => 'directory',
-                    #});
-                    my $collection = $store->insert_or_update_collection({
-                        parent_id => $parent->{entry_id},
-                        collection_type => 'directory',
-                        title => $parent->{title} // basename($parent->{filename}),
-                    });
-                    my $membership = $store->insert_or_update_membership({
-                        collection_id => $collection->{collection_id},
-                        entry_id => $info->{entry_id},
-                        position => undef,
-                    });
-                }
-            }
-
-        },
-        directory => sub( $directory, $context ) {
-            my $info = $store->find_direntry_by_filename( $directory );
-            if( ! $info ) {
-                $info = basic_direntry_info($directory,$context,{ entry_type => 'directory' });
-                $info = do_update($info);
-            };
-
-            status( sprintf "% 8s | %s", 'scan', $directory);
-            return 1
+    Filesys::DB::Operation::do_scan(
+        store => $store,
+        directories => \@directories,
+        dry_run => $dry_run,
+        status => sub($action,$location) {
+            status( sprintf "% 8s | %s", $action, $location );
         },
     );
 }
