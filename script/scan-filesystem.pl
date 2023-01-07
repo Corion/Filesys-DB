@@ -390,6 +390,50 @@ sub do_update( $info, %options ) {
     }
 };
 
+sub do_rescan( @sql ) {
+    @sql = '1=1' unless @sql;
+    my $where = join " ", @sql;
+    status( sprintf "% 8s | %s", 'rescan', $where);
+
+    my %rescan_parents;
+
+    scan_tree_db(
+        file => sub( $info, $context ) {
+            # do a liveness check? and potentially delete the file entry
+            # also, have a dry-run option, just listing the files out of date?!
+            if( ! -e $info->{filename}) {
+
+                my @parents = $store->find_relations_by_type_child( 'directory', $info->{entry_id} );
+                use Data::Dumper;
+                die Dumper \@parents;
+
+                for my $p (@parents) {
+                    $rescan_parents{ $p->{parent_id } } = 1;
+                };
+
+                do_delete({ filename => $info->{filename}});
+                # This blows away all other data, like tags, etc. as well.
+                # Maybe we would want to mark it as orphaned instead?!
+                # We should also mark the parent for a content re-scan
+                # so we pick up new arrivals/renames
+
+            } else {
+                if( ! $dry_run ) {
+                    $info = update_properties( $info, force => 1, context => $context );
+                };
+            }
+        },
+        directory => sub( $info, $context ) {
+            if( ! -e $info->{filename}) {
+                do_delete({ filename => $info->{filename}});
+            };
+            return 1
+
+        },
+        where => $where,
+    );
+}
+
 if( $action eq 'scan') {
     # Maybe we want to preseed with DB results so that we get unscanned directories
     # first, or empty directories ?!
@@ -445,33 +489,8 @@ if( $action eq 'scan') {
         },
     );
 } elsif( $action eq 'rescan' ) {
-    @ARGV = '1=1' unless @ARGV;
-    my $where = join " ", @ARGV;
-    status( sprintf "% 8s | %s", 'rescan', $where);
-    scan_tree_db(
-        file => sub( $info, $context ) {
-            # do a liveness check? and potentially delete the file entry
-            # also, have a dry-run option, just listing the files out of date?!
-            if( ! -e $info->{filename}) {
-                # The file has gone away
-                do_delete({ filename => $info->{filename}});
-                # This blows away all other data, like tags, etc. as well.
-                # Maybe we would want to mark it as orphaned instead?!
-            } else {
-                if( ! $dry_run ) {
-                    $info = update_properties( $info, force => 1, context => $context );
-                };
-            }
-        },
-        directory => sub( $info, $context ) {
-            if( ! -e $info->{filename}) {
-                do_delete({ filename => $info->{filename}});
-            };
-            return 1
+    do_rescan( @ARGV );
 
-        },
-        where => $where,
-    );
 } elsif ($action eq 'watch' ) {
     my $watcher = Filesys::DB::Watcher->new(store => $store);
     status( sprintf "% 8s | %s", 'idle', "");
