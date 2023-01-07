@@ -390,56 +390,12 @@ sub do_update( $info, %options ) {
     }
 };
 
-sub do_rescan( @sql ) {
-    @sql = '1=1' unless @sql;
-    my $where = join " ", @sql;
-    status( sprintf "% 8s | %s", 'rescan', $where);
-
-    my %rescan_parents;
-
-    scan_tree_db(
-        file => sub( $info, $context ) {
-            # do a liveness check? and potentially delete the file entry
-            # also, have a dry-run option, just listing the files out of date?!
-            if( ! -e $info->{filename}) {
-
-                my $parents = $store->find_memberships_by_type_child( 'directory', $info->{entry_id} );
-                use Data::Dumper;
-                die Dumper $parents;
-                #
-                #for my $p ($parents->@*) {
-                #    $rescan_parents{ $p->{parent_id } } = 1;
-                #};
-
-                do_delete({ filename => $info->{filename}});
-                # This blows away all other data, like tags, etc. as well.
-                # Maybe we would want to mark it as orphaned instead?!
-                # We should also mark the parent for a content re-scan
-                # so we pick up new arrivals/renames
-
-            } else {
-                if( ! $dry_run ) {
-                    $info = update_properties( $info, force => 1, context => $context );
-                };
-            }
-        },
-        directory => sub( $info, $context ) {
-            if( ! -e $info->{filename}) {
-                do_delete({ filename => $info->{filename}});
-            };
-            return 1
-
-        },
-        where => $where,
-    );
-}
-
-if( $action eq 'scan') {
+sub do_scan( @directories ) {
     # Maybe we want to preseed with DB results so that we get unscanned directories
     # first, or empty directories ?!
     scan_tree_bf(
         wanted => \&keep_fs_entry,
-        queue => \@ARGV,
+        queue => \@directories,
         file => sub($file,$context) {
             my $info = $store->find_direntry_by_filename( $file );
             if( ! $info) {
@@ -488,6 +444,54 @@ if( $action eq 'scan') {
             return 1
         },
     );
+}
+
+sub do_rescan( @sql ) {
+    @sql = '1=1' unless @sql;
+    my $where = join " ", @sql;
+    status( sprintf "% 8s | %s", 'rescan', $where);
+
+    my %rescan_parents;
+
+    scan_tree_db(
+        file => sub( $info, $context ) {
+            # do a liveness check? and potentially delete the file entry
+            # also, have a dry-run option, just listing the files out of date?!
+            if( ! -e $info->{filename}) {
+
+                my $parents = $store->find_memberships_by_type_child( 'directory', $info->{entry_id} );
+                use Data::Dumper;
+                die Dumper $parents;
+                #
+                #for my $p ($parents->@*) {
+                #    $rescan_parents{ $p->{parent_id } } = 1;
+                #};
+
+                do_delete({ filename => $info->{filename}});
+                # This blows away all other data, like tags, etc. as well.
+                # Maybe we would want to mark it as orphaned instead?!
+                # We should also mark the parent for a content re-scan
+                # so we pick up new arrivals/renames
+
+            } else {
+                if( ! $dry_run ) {
+                    $info = update_properties( $info, force => 1, context => $context );
+                };
+            }
+        },
+        directory => sub( $info, $context ) {
+            if( ! -e $info->{filename}) {
+                do_delete({ filename => $info->{filename}});
+            };
+            return 1
+
+        },
+        where => $where,
+    );
+}
+
+if( $action eq 'scan') {
+    do_scan( @ARGV );
 } elsif( $action eq 'rescan' ) {
     do_rescan( @ARGV );
 
