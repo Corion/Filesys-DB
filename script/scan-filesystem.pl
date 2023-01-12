@@ -21,14 +21,9 @@ use YAML 'LoadFile';
 
 use File::Basename;
 
-use Digest::SHA;
-use MIME::Detect;
 BEGIN {
 $ENV{HOME} //= $ENV{USERPROFILE}; # to shut up Music::Tag complaining about undefined $ENV{HOME}
 }
-
-use Music::Tag 'traditional' => 1;
-use Apache::Tika::Server;
 
 GetOptions(
     'mountpoint|m=s' => \my $mountpoint,
@@ -66,10 +61,6 @@ if( $mount_alias && !@ARGV ) {
 
 # We want a breadth-first FS scan, preferring the most recent entries
 # over older entries (as we assume that old entries don't change much)
-
-sub timestamp($ts=time) {
-    return strftime '%Y-%m-%dT%H:%M:%SZ', gmtime($ts)
-}
 
 # Maybe this should move into its own, tiny, tiny module?!
 # or we should bring Term::Output::List up to date/onto CPAN
@@ -126,204 +117,6 @@ sub timestamp($ts=time) {
     END { status(""); }
 }
 
-sub audio_info( $audiofile, $artist=undef, $album=undef ) {
-    # Maybe this can take over MP3 too?
-    local $MP3::Info::try_harder = 1;
-    my $tag = Music::Tag->new( $audiofile);
-
-    $tag->get_tag;
-
-    # Mush 03/10 into 03
-    if( $tag->track =~ m!(\d+)\s*/\s*\d+$! ) {
-        $tag->track( $1 );
-    };
-
-    my %info = map { $_ => $tag->$_() } qw(artist album track title duration);
-    $info{ duration } ||= '-1000'; # "unknown" if we didn't find anything
-    $audiofile =~ /\.(\w+)$/;
-    $info{ ext } = lc $1;
-
-    $info{ url } = basename( $audiofile ); # we assume the playlist will live in the same directory
-    $info{ artist } //= $artist;
-    $info{ album  } //= $album;
-    $info{ track  } = sprintf '%02d', $info{ track };
-
-    return \%info;
-}
-
-sub _mime_match( $pattern, $type ) {
-    my $p = $pattern =~ s/\*/.*/r;
-    return $type =~ qr!\A$p\z!
-}
-
-# This does a recursive descent to find whether rules apply or not
-sub _applicable_properties( $props, $info, $options, $visual='???' ) {
-    state %path_cache;
-    my @res;
-    if( ref $props eq 'HASH' ) {
-        for my $prop (sort keys %$props) {
-            if( $prop =~ m!^\$! ) {
-                my $vis;
-                if(  $prop =~ m!\.([^.]+)$! ) {
-                    $vis = $1
-                };
-
-                # JSON path
-                # Check that it is missing or we are rebuilding
-                $path_cache{ $prop } //= JSON::Path->new( $prop );
-                my $do_update = $options->{ force }
-                            || ! defined $path_cache{ $prop }->value($info);
-                if( $do_update ) {
-                    my @prop;
-                    eval { @prop = _applicable_properties( $props->{$prop}, $info, $options, $vis ); };
-                    if( $@ ) {
-                        return
-                    } else {
-                        push @res, @prop
-                    }
-                }
-
-            } elsif( $prop =~ m!^[-.*\w]+/[-.*\w]+\z! ) {
-                # MIME type
-                # Check that it applies (or is empty?!)
-                eval {
-                    if( _mime_match( $prop, $info->{mime_type} )) {
-                        push @res, _applicable_properties( $props->{$prop}, $info, $options, $visual );
-                    }
-                }
-            } else {
-                croak "Unknown property spec '$prop'";
-            }
-        }
-    } elsif ( ref $props eq 'CODE' ) {
-        push @res, [$visual, $props]
-    } else {
-        croak "Unknown property spec '$props'";
-    }
-    return @res
-}
-
-sub extract_content_via_tika( $info ) {
-    my $filename = $info->{filename};
-
-    state $tika //= do {
-        my $t = eval {
-                    Apache::Tika::Server->new(
-            jarfile => '/home/corion/Projekte/Apache-Tika-Async/jar/tika-server-standard-2.3.0.jar',
-            );};
-        eval { $t->launch; };
-        ! $@ and $t
-    };
-    if($tika) {
-        my $pdf_info = $tika->get_all( $filename );
-        if( $pdf_info->meta->{'meta:language'} =~ /^(de|en|fr|zh)$/ ) {
-            # I don't expect other languages, except for misdetections
-            $info->{language} = $pdf_info->meta->{'meta:language'};
-        }
-        $info->{content}->{title} = $pdf_info->meta->{'dc:title'};
-        $info->{content}->{html} = $pdf_info->content();
-
-        return 1;
-    } else { return 0 }
-}
-
-sub extract_content_via_audio_tag( $info ) {
-    return if $info->{mime_type} eq 'audio/x-mpegurl';
-    return if $info->{mime_type} eq 'audio/x-scpls';
-    return if $info->{mime_type} eq 'audio/x-wav';
-
-    my $res;
-
-    my $audio_info = audio_info( $info->{filename} );
-    for( qw(title artist album track duration)) {
-        if( ! defined $info->{content}->{$_}) {
-            $info->{content}->{$_} = $audio_info->{$_};
-            $res = 1;
-        }
-    };
-    $res;
-}
-
-our %file_properties = (
-    # '$.content.text' ?
-    '$.mountpoint' => sub( $info ) {
-        $info->{mountpoint} = $store->get_mountpoint_alias( $info->{filename});
-        1
-    },
-    '$.sha256' => sub( $info ) {
-        my $file = $info->{filename};
-        if( $info->{entry_type} eq 'file' ) {
-            my $digest = Digest::SHA->new(256);
-            eval {
-                $digest->addfile($file);
-                $info->{sha256} = $digest->hexdigest;
-                return 1
-            };
-            return 0;
-        }
-    },
-    '$.mime_type' => sub( $info ) {
-        state $mime = MIME::Detect->new();
-        if( $info->{entry_type} eq 'file' ) {
-
-            my @types;
-            eval { @types = $mime->mime_types($info->{filename}); };
-            if( $@ ) {
-                return 0;
-            };
-            if( @types ) {
-                my $type = $types[0];
-                $info->{mime_type} = $type->mime_type;
-                return 1
-            }
-        }
-    },
-    '$.content.title' => {
-        'audio/*' => \&extract_content_via_audio_tag,
-    },
-    # Arrayref here, so we only make a single call?!
-    'application/vnd.oasis.opendocument.presentation' => {
-        '$.content.title' => \&extract_content_via_tika,
-        '$.content.html'  => \&extract_content_via_tika,
-    },
-    'application/pdf' => {
-        # Arrayref here, so we only make a single call?!
-        '$.content.title' => \&extract_content_via_tika,
-        '$.content.html'  => \&extract_content_via_tika,
-    },
-);
-
-sub update_properties( $info, %options ) {
-    my $last_ts = $info->{last_scanned} // '';
-
-    # This would be a kind of plugin system, maybe?!
-    my $do_scan;
-
-    if( exists $options{ context }) {
-        $do_scan = timestamp($options{ context }->{stat}->[9]) gt $info->{last_scanned};
-    };
-
-    if( $do_scan ) {
-        my @updaters = _applicable_properties( \%file_properties, $info, \%options );
-        for my $up (@updaters) {
-            my( $vis, $cb ) = @$up;
-            status( sprintf "% 8s | %s", $vis, $info->{filename});
-            if( $cb->($info)) {
-                $info->{last_scanned} = timestamp;
-            };
-        };
-    }
-
-    # the same for other fields:
-    # If we changed anything, update the database:
-
-    if( $info->{last_scanned} ne $last_ts ) {
-        #msg( sprintf "% 8s | %s", 'update', $file);
-        $info = do_update($info);
-    }
-    return $info
-}
-
 sub scan_tree_db( %options ) {
     $options{ level } //= 0;
     $options{ level } += 1;
@@ -355,23 +148,9 @@ sub do_delete( $info ) {
     }
 };
 
-sub do_update( $info, %options ) {
-    if( $dry_run ) {
-        msg( "update,$info->{filename}" );
-        return $info;
-    } else {
-        $info = $store->insert_or_update_direntry($info);
-    }
-};
-
-sub do_scan( @directories ) {
-    Filesys::DB::Operation::do_scan(
-        store => $store,
+sub do_scan( $op, @directories ) {
+    $op->do_scan(
         directories => \@directories,
-        dry_run => $dry_run,
-        status => sub($action,$location) {
-            status( sprintf "% 8s | %s", $action, $location );
-        },
     );
 }
 
@@ -419,10 +198,18 @@ sub do_rescan( @sql ) {
     );
 }
 
+my $op = Filesys::DB::Operation->new(
+    store => $store,
+    dry_run => $dry_run,
+    status => sub($action,$location) {
+        status( sprintf "% 8s | %s", $action, $location );
+    },
+);
+
 if( $action eq 'scan') {
-    do_scan( @ARGV );
+    do_scan( $op, @ARGV );
 } elsif( $action eq 'rescan' ) {
-    do_rescan( @ARGV );
+    do_rescan( $op, @ARGV );
 
 } elsif ($action eq 'watch' ) {
     my $watcher = Filesys::DB::Watcher->new(store => $store);
