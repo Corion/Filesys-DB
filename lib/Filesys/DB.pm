@@ -256,7 +256,7 @@ sub insert_or_update_direntry( $self, $info ) {
 
     my $res;
     if( defined $info->{entry_id}) {
-        my $entry_id = $info->{entry_id};
+        my $entry_id = \$info->{entry_id};
         my $tmp_res = $self->selectall_named(<<'SQL', $value, $entry_id )->[0];
             insert into filesystem_entry (entry_id, entry_json)
             values (:entry_id, :value)
@@ -288,7 +288,7 @@ sub delete_direntry( $self, $info ) {
 
     my $res;
     if( defined $info->{entry_id}) {
-        my $entry_id = $info->{entry_id};
+        my $entry_id = \$info->{entry_id};
         my $tmp_res = $self->selectall_named(<<'SQL', $entry_id )->[0];
             delete from filesystem_entry
             where entry_id=:entry_id
@@ -325,7 +325,8 @@ SQL
     return $info
 }
 
-sub find_memberships_by_type_child( $self, $collection_type, $entry_id ) {
+sub find_memberships_by_type_child( $self, $collection_type, $_entry_id ) {
+    my $entry_id = \$_entry_id;
     my $res = $self->selectall_named(<<'SQL', $collection_type, $entry_id );
       select c.collection_id
         from filesystem_membership m
