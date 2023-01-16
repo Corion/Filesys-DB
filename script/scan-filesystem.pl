@@ -175,12 +175,10 @@ sub do_rescan( $op, @sql ) {
             if( ! -e $info->{filename}) {
 
                 my $parents = $store->find_memberships_by_type_child( 'directory', $info->{entry_id} );
-                use Data::Dumper;
-                die Dumper $parents;
-                #
-                #for my $p ($parents->@*) {
-                #    $rescan_parents{ $p->{parent_id } } = 1;
-                #};
+                # we don't use this information yet
+                for my $p ($parents->@*) {
+                    $rescan_parents{ $p->{collection_id } } = 1;
+                };
 
                 do_delete({ filename => $info->{filename}});
                 # This blows away all other data, like tags, etc. as well.
