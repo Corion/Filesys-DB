@@ -29,6 +29,7 @@ GetOptions(
     'mountpoint|m=s' => \my $mountpoint,
     'alias|a=s'      => \my $mount_alias,
     'config|c=s'     => \my $config_file,
+    'dsn|d=s'        => \my $dsn,
     'rescan|r'       => \my $rescan,
     'dry-run|n'      => \my $dry_run,
     'all'            => \my $scan_all_mountpoints,
@@ -39,7 +40,13 @@ my $action = $watch_all_mountpoints ? 'watch'
            : $rescan ? 'rescan'
            : 'scan';
 
-my $store = Filesys::DB->new();
+$dsn //= 'dbi:SQLite:dbname=db/filesys-db.sqlite';
+
+my $store = Filesys::DB->new(
+   dbh => {
+       dsn => $dsn,
+   }
+);
 $store->init_config(
     default_config_file => 'filesys-db.yaml',
     config_file         => $config_file,
