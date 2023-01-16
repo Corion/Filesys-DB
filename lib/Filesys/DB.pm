@@ -98,6 +98,9 @@ sub init_config( $self, %options ) {
 
 # This should go into a separate DBIx role, likely
 sub bind_lexicals( $self, $sql, $level, $lexicals ) {
+    croak "Need an SQL string or a prepared DB handle"
+        unless $sql;
+
     my $sth;
     if( ref $sql ) {
         $sth = $sql;
