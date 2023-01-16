@@ -217,7 +217,13 @@ sub update_properties( $self, $info, %options ) {
         if( ! $info->{last_scanned} ) {
             $do_scan = 1
         } else {
-            $do_scan = timestamp($options{ context }->{stat}->[9]) gt $last_ts;
+            if( $options{ context }->{stat}
+                and $options{ context }->{stat}->@* ) {
+                $do_scan = timestamp($options{ context }->{stat}->[9]) gt $last_ts;
+            } else {
+                # ... we have no stat info, so the file doesn't exist on disk
+                # anyway, so this is super sketchy
+            }
         };
     };
 
