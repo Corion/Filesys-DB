@@ -34,6 +34,7 @@ has 'mountpoints' => (
 
 around BUILDARGS => sub ($orig, $class, @args) {
     my $args = @args == 1 && ref $args[0] ? $args[0] : { @args };
+    # This should potentially also come from the config?!
     $args->{ dbh } //= {};
     $args->{ dbh }->{dsn} //= 'dbi:SQLite:dbname=db/filesys-db.sqlite';
     $args->{ dbh }->{options} //= {
