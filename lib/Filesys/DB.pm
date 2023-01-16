@@ -103,7 +103,7 @@ sub bind_lexicals( $self, $sql, $level, $lexicals ) {
         $sth = $sql;
     } else {
         my $dbh = $self->dbh;
-        $sth = $dbh->prepare($sql);
+        $sth = $dbh->prepare_cached($sql);
     };
     return $sth unless $lexicals;
 
