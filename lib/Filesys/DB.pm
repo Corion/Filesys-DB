@@ -173,6 +173,7 @@ sub execute_named {
 
 sub selectall_named_ex($self, %options) {
     $options{ level } //= 1;
+    # Shouldn't this just be ->execute_named_ex ?!
     my $sth = $self->bind_lexicals( $options{ sth }, $options{ level }+1, $options{ lexicals });
     $sth->execute;
     # we also want to lock the hashes we return here, I guess
@@ -183,8 +184,8 @@ sub selectall_named {
     my( $self, $sql ) = splice @_, 0, 2;
 
     my $lex = \@_;
-    my $sth = $self->selectall_named_ex(
-        sth => $sql,
+    return $self->selectall_named_ex(
+        sql   => $sql,
         level => 2,
         lexicals => $lex,
     );
