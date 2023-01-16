@@ -346,4 +346,14 @@ sub do_update( $self, $info, %options ) {
     }
 };
 
+sub do_delete( $self, $info, %options ) {
+    my $dry_run = delete $options{ dry_run };
+    if( $dry_run ) {
+        $self->msg->( "delete,$info->{filename}" );
+        return $info;
+    } else {
+        $info = $self->store->delete_direntry($info);
+    }
+};
+
 1;

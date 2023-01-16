@@ -147,12 +147,8 @@ sub scan_entries( %options ) {
     }
 }
 
-sub do_delete( $info ) {
-    if( $dry_run ) {
-        msg( "delete,$info->{filename}" );
-    } else {
-        $store->delete_direntry($info);
-    }
+sub do_delete( $op, $info ) {
+    $op->do_delete( $info, dry_run => $dry_run );
 };
 
 sub do_scan( $op, @directories ) {
@@ -180,7 +176,7 @@ sub do_rescan( $op, @sql ) {
                     $rescan_parents{ $p->{collection_id } } = 1;
                 };
 
-                do_delete({ filename => $info->{filename}});
+                do_delete($op, { filename => $info->{filename}});
                 # This blows away all other data, like tags, etc. as well.
                 # Maybe we would want to mark it as orphaned instead?!
                 # We should also mark the parent for a content re-scan
@@ -188,13 +184,13 @@ sub do_rescan( $op, @sql ) {
 
             } else {
                 if( ! $dry_run ) {
-                    $info = update_properties( $info, force => 1, context => $context );
+                    $info = $op->update_properties( $info, force => 1, context => $context );
                 };
             }
         },
         directory => sub( $info, $context ) {
             if( ! -e $info->{filename}) {
-                do_delete({ filename => $info->{filename}});
+                do_delete($op, { filename => $info->{filename}});
             };
             return 1
 
@@ -248,7 +244,7 @@ if( $action eq 'scan') {
             return unless -s $file;
 
             my $info = $store->find_direntry_by_filename( $file );
-            $info = update_properties( $info, force => 1 );
+            $info = $op->update_properties( $info, force => 1 );
 
         } elsif( $ev->{action} eq 'old_name' ) {
             # ignore this
@@ -258,7 +254,7 @@ if( $action eq 'scan') {
             # how should we handle renaming an item? Force a rescan to update other metadata?!
             my $info = $store->find_direntry_by_filename( $ev->{old_name});
             $info->{filename} = $ev->{new_name};
-            $info = update_properties( $info, force => 1 );
+            $info = $op->update_properties( $info, force => 1 );
         }
         status( sprintf "% 8s | %s", 'idle', "");
     });
