@@ -177,7 +177,8 @@ sub execute_named {
 sub selectall_named_ex($self, %options) {
     $options{ level } //= 1;
     # Shouldn't this just be ->execute_named_ex ?!
-    my $sth = $self->bind_lexicals( $options{ sth }, $options{ level }+1, $options{ lexicals });
+    my $sql = $options{ sth } // $options{ sql };
+    my $sth = $self->bind_lexicals( $sql, $options{ level }+1, $options{ lexicals });
     $sth->execute;
     # we also want to lock the hashes we return here, I guess
     return $sth->fetchall_arrayref({})
