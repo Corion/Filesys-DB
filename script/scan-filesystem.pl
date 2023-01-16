@@ -154,7 +154,7 @@ sub do_scan( $op, @directories ) {
     );
 }
 
-sub do_rescan( @sql ) {
+sub do_rescan( $op, @sql ) {
     @sql = '1=1' unless @sql;
     my $where = join " ", @sql;
     status( sprintf "% 8s | %s", 'rescan', $where);
