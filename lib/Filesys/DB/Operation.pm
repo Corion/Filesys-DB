@@ -261,7 +261,7 @@ sub basic_direntry_info( $self, $ent, $context, $defaults ) {
 sub keep_fs_entry( $self, $name ) {
     my $store = $self->store;
 
-    if( $name =~ m![/\\](?:(?:\.(git|cvs|config|DS_Store))|__MACOSX|Thumbs.db|\.tmp)\z!i) {
+    if( $name =~ m![/\\](?:(?:\.(git|cvs|config|DS_Store))|__MACOSX|Thumbs.db|\.tmp|\.part)\z!i) {
         # msg("Skipping '$name'");
         return undef
     }
