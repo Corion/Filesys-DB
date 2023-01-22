@@ -148,7 +148,7 @@ sub scan_entries( %options ) {
 }
 
 sub do_delete( $op, $info ) {
-    $op->do_delete( $info, dry_run => $dry_run );
+    $op->do_delete( $info );
 };
 
 sub do_scan( $op, @directories ) {

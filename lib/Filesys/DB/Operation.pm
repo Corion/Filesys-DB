@@ -209,6 +209,9 @@ our %file_properties = (
 
 sub update_properties( $self, $info, %options ) {
     my $last_ts = $info->{last_scanned} // '';
+    my $dry_run = exists $options{ dry_run }
+                  ? delete $options{ dry_run }
+                  : $self->dry_run;
 
     # This would be a kind of plugin system, maybe?!
     my $do_scan;
@@ -233,7 +236,7 @@ sub update_properties( $self, $info, %options ) {
         my $status = $self->status;
         for my $up (@updaters) {
             my( $vis, $cb ) = @$up;
-            if( $options{ dry_run } ) {
+            if( $dry_run ) {
                 $self->msg->( "rescan,$vis,$info->{filename}");
             } else {
                 $status->( $vis, $info->{filename});
@@ -287,7 +290,9 @@ sub keep_fs_entry( $self, $name ) {
 sub do_scan( $self, %options ) {
     my $store = $self->store;
     my $directories = delete $options{ directories };
-    my $dry_run = delete $options{ dry_run };
+    my $dry_run = exists $options{ dry_run }
+                  ? delete $options{ dry_run }
+                  : $self->dry_run;
     my $status = $self->status;
     my $msg    = $self->msg;
 
@@ -351,7 +356,9 @@ sub do_scan( $self, %options ) {
 }
 
 sub do_update( $self, $info, %options ) {
-    my $dry_run = delete $options{ dry_run };
+    my $dry_run = exists $options{ dry_run }
+                  ? delete $options{ dry_run }
+                  : $self->dry_run;
     if( $dry_run ) {
         $self->msg->( "update,$info->{filename}" );
         return $info;
@@ -361,7 +368,9 @@ sub do_update( $self, $info, %options ) {
 };
 
 sub do_delete( $self, $info, %options ) {
-    my $dry_run = delete $options{ dry_run };
+    my $dry_run = exists $options{ dry_run }
+                  ? delete $options{ dry_run }
+                  : $self->dry_run;
     if( $dry_run ) {
         $self->msg->( "delete,$info->{filename}" );
         return $info;
