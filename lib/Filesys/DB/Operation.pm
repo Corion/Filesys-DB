@@ -229,12 +229,17 @@ sub update_properties( $self, $info, %options ) {
 
     if( $do_scan ) {
         my @updaters = _applicable_properties( \%file_properties, $info, \%options );
+
+        my $status = $self->status;
         for my $up (@updaters) {
             my( $vis, $cb ) = @$up;
-            my $status = $self->status;
-            $status->( $vis, $info->{filename});
-            if( $cb->($self, $info)) {
-                $info->{last_scanned} = timestamp;
+            if( $options{ dry_run } ) {
+                $self->msg->( "rescan,$vis,$info->{filename}");
+            } else {
+                $status->( $vis, $info->{filename});
+                if( $cb->($self, $info)) {
+                    $info->{last_scanned} = timestamp;
+                };
             };
         };
     }

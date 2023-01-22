@@ -183,9 +183,7 @@ sub do_rescan( $op, @sql ) {
                 # so we pick up new arrivals/renames
 
             } else {
-                if( ! $dry_run ) {
-                    $info = $op->update_properties( $info, force => 1, context => $context );
-                };
+                $info = $op->update_properties( $info, force => 1, context => $context );
             }
         },
         directory => sub( $info, $context ) {
