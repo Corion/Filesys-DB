@@ -107,7 +107,13 @@ sub bind_lexicals( $self, $sql, $level, $lexicals ) {
         $sth = $sql;
     } else {
         my $dbh = $self->dbh;
-        $sth = $dbh->prepare_cached($sql);
+        my $ok = eval {
+            $sth = $dbh->prepare_cached($sql);
+            1;
+        };
+        if( ! $ok ) {
+            croak "$@\nOffending SQL: $sql";
+        };
     };
     return $sth unless $lexicals;
 
