@@ -241,6 +241,8 @@ sub update_properties( $self, $info, %options ) {
             if( $dry_run ) {
                 $self->msg->( "rescan,$vis,$info->{filename}");
             } else {
+                # Just so we always have a last_scanned entry:
+                $info->{last_scanned} //= timestamp;
                 $status->( $vis, $info->{filename});
                 if( $cb->($self, $info)) {
                     $info->{last_scanned} = timestamp;
