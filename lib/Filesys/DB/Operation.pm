@@ -220,14 +220,22 @@ sub update_properties( $self, $info, %options ) {
 
     if( exists $options{ context }) {
         if( ! $info->{last_scanned} ) {
+            # This should be guarded by a verbosity/log level thing...
+            #$self->msg->("rescan,no_info,$info->{filename}");
             $do_scan = 1
         } else {
             if( $options{ context }->{stat}
                 and $options{ context }->{stat}->@* ) {
-                $do_scan = timestamp($options{ context }->{stat}->[9]) gt $last_ts;
+                my $ts = timestamp($options{ context }->{stat}->[9]);
+                $do_scan = $ts gt $last_ts;
+                #if( $do_scan ) {
+                #    $self->msg->("rescan,modified ($last_ts / $ts),$info->{filename}");
+                #};
             } else {
                 # ... we have no stat info, so the file doesn't exist on disk
-                # anyway, so this is super sketchy
+                # (or we are doing a rescan from the DB)
+                # So, let's queue a rescan here?!
+                $do_scan = 1;
             }
         };
     };
@@ -246,16 +254,17 @@ sub update_properties( $self, $info, %options ) {
                 $status->( $vis, $info->{filename});
                 if( $cb->($self, $info)) {
                     $info->{last_scanned} = timestamp;
-                };
+                #} else {
+                #    $self->msg->( "no_change,$vis,$info->{filename}");
+                }
             };
         };
     }
 
-    # the same for other fields:
     # If we changed anything, update the database:
-
-    if(( $info->{last_scanned} // '' ) ne $last_ts ) {
+    if( ! $last_ts or ($info->{last_scanned} // '' ) ne $last_ts ) {
         #msg( sprintf "% 8s | %s", 'update', $file);
+        # $self->msg->( "update,$info->{filename} ( $info->{last_scanned} <=> $last_ts )");
         $info = $self->do_update($info);
     }
     return $info
