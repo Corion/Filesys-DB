@@ -371,6 +371,16 @@ SQL
     return $info
 }
 
+sub find_collection( $self, $_collection_id ) {
+    my $collection_id = \$_collection_id;
+    my $res = $self->selectall_named(<<'SQL', $collection_id );
+      select *
+        from filesystem_collection
+        where collection_id = :collection_id
+SQL
+    return $res->[0]
+}
+
 sub insert_or_update_membership( $self, $info ) {
     my $value = encode_json( $info );
     croak "Need a collection" unless $info->{collection_id};
