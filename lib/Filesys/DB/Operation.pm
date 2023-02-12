@@ -274,7 +274,8 @@ sub keep_fs_entry( $self, $name ) {
     my $store = $self->store;
 
         # certain filenames
-    if( $name =~ m![/\\](?:(?:\.(git|cvs|config|DS_Store))|__MACOSX|Thumbs.db)\z!i
+        # XXX this should go into some kind of config instead
+    if( $name =~ m![/\\](?:(?:\.(git|cvs|config|DS_Store|~lock\.))|__MACOSX|Thumbs.db)\z!i
         # certain file extensions
         or $name =~ m!(?:\.tmp|\.part)\z! ) {
         # msg("Skipping '$name'");
