@@ -183,6 +183,13 @@ sub do_rescan( $op, @sql ) {
                 # so we pick up new arrivals/renames
 
             } else {
+
+                if( ! keys %$context ) {
+                    # We haven't hit the disk for the context, so fetch the
+                    # basic context
+                    $context = Filesys::TreeWalker::_collect_fs_info( $info->{filename} );
+                };
+
                 $info = $op->update_properties( $info, force => 1, context => $context );
             }
         },
