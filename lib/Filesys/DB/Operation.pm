@@ -162,7 +162,7 @@ our %file_properties = (
     # '$.content.text' ?
     '$.mountpoint' => sub( $self, $info ) {
         $info->{mountpoint} = $self->store->get_mountpoint_alias( $info->{filename});
-        1
+        0
     },
     '$.sha256' => sub( $self, $info ) {
         my $file = $info->{filename};
@@ -170,8 +170,9 @@ our %file_properties = (
             my $digest = Digest::SHA->new(256);
             eval {
                 $digest->addfile($file);
+                my $old = $info->{sha256};
                 $info->{sha256} = $digest->hexdigest;
-                return 1
+                return (($old || '') eq $info->{sha256})
             };
             return 0;
         }
@@ -187,8 +188,9 @@ our %file_properties = (
             };
             if( @types ) {
                 my $type = $types[0];
+                my $old = $info->{mime_type};
                 $info->{mime_type} = $type->mime_type;
-                return 1
+                return $old eq $info->{mime_type}
             }
         }
     },
