@@ -29,6 +29,7 @@ create table filesystem_entry (
       -- or do we want all of this in another table?!
     , title        generated always as (json_extract(entry_json, '$.content.title'))     stored
     , duration     generated always as (json_extract(entry_json, '$.content.duration'))  stored
+    , bpm          generated always as (json_extract(entry_json, '$.content.bpm'))       stored
     , html         generated always as (json_extract(entry_json, '$.content.html'))      stored
     , "text"       generated always as (json_extract(entry_json, '$.content.text'))      stored
     , "language"   generated always as (json_extract(entry_json, '$.content.language'))  stored
