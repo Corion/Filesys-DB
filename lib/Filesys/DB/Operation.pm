@@ -196,7 +196,7 @@ our %file_properties = (
             };
             if( @types ) {
                 my $type = $types[0];
-                my $old = $info->{mime_type};
+                my $old = $info->{mime_type} // '';
                 $info->{mime_type} = $type->mime_type;
                 return $old eq $info->{mime_type}
             }
