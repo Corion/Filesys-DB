@@ -62,6 +62,14 @@ sub audio_info( $audiofile, $artist=undef, $album=undef ) {
     $info{ album  } //= $album;
     $info{ track  } = sprintf '%02d', $info{ track };
 
+    if( my $tag = $tag->mp3 ) {
+        if( my $mp3 = $tag->{ID3v2} ) {
+            if( my $bpm = $mp3->get_frame("TBPM")) {
+                $info{ bpm } = $bpm;
+            }
+        }
+    }
+
     return \%info;
 }
 
