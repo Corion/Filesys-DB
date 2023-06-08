@@ -207,7 +207,7 @@ sub do_rescan( $op, @sql ) {
         say "Need to rescan:";
         for (map { $store->find_collection( $_ ) } sort { $a <=> $b } keys %rescan_parents) {
             use Data::Dumper; say Dumper $_;
-            say $_->{filename};
+            say $_->{parent_id};
         }
     }
 
