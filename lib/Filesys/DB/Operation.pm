@@ -194,7 +194,7 @@ our %file_properties = (
                 $digest->addfile($file);
                 my $old = $info->{sha256};
                 $info->{sha256} = $digest->hexdigest;
-                return (($old || '') eq $info->{sha256})
+                return (($old || '') ne $info->{sha256})
             };
             return 0;
         }
@@ -212,7 +212,7 @@ our %file_properties = (
                 my $type = $types[0];
                 my $old = $info->{mime_type} // '';
                 $info->{mime_type} = $type->mime_type;
-                return $old eq $info->{mime_type}
+                return $old ne $info->{mime_type}
             }
         }
     },
