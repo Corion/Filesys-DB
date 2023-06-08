@@ -80,6 +80,21 @@ create table filesystem_membership (
     , position             generated always as (json_extract(membership_json, '$.position'))
 );
 create unique index idx_filesystem_membership_collection_id_entry_id on filesystem_membership (collection_id, entry_id);
+
 -- full text search
 CREATE VIRTUAL TABLE filesystem_entry_fts5
-    USING fts5(content, title, "language" UNINDEXED, entry_id UNINDEXED, tokenize="perl 'Filesys::DB::FTS::Tokenizer::locale_tika_tokenizer'")
+    USING fts5(html, title, "language" UNINDEXED, entry_id UNINDEXED, tokenize="perl 'Filesys::DB::FTS::Tokenizer::locale_tika_tokenizer'");
+
+-- Triggers to keep the FTS index up to date.
+CREATE TRIGGER filesystem_entry_ai AFTER INSERT ON filesystem_entry BEGIN
+  INSERT INTO filesystem_entry_fts5(html, title, "language", entry_id) VALUES (new.html, new.title, new."language", new.entry_id); --
+END;
+
+--CREATE TRIGGER filesystem_entry_ad AFTER DELETE ON filesystem_entry BEGIN
+--  INSERT INTO filesystem_entry_fts5(filesystem_entry_fts5, html, title, "language", entry_id) VALUES('delete', old.html, old.title, old."language", old.entry_id);
+--END;
+
+CREATE TRIGGER filesystem_entry_au AFTER UPDATE ON filesystem_entry BEGIN
+  --INSERT INTO filesystem_entry_fts5(filesystem_entry_fts5, html, title, "language", entry_id) VALUES('delete', old.html, old.title, old."language", old.entry_id);
+  INSERT INTO filesystem_entry_fts5(html, title, "language", entry_id) VALUES (new.html, new.title, new."language", new.entry_id);
+END;

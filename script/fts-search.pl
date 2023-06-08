@@ -77,12 +77,12 @@ sub right_ell($str,$len) {
 }
 
 my $tmp_res = $store->selectall_named(<<'', $search);
-    SELECT content
+    SELECT html
          , title
          , entry_id
          , highlight(filesystem_entry_fts5, 0, '<-mark->', '</-mark->') as snippet
       FROM filesystem_entry_fts5
-      where content MATCH :search
+      where html MATCH :search
   order by rank
 
 # prepare for output

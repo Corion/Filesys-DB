@@ -6,6 +6,8 @@ use Getopt::Long;
 use YAML 'LoadFile';
 use PerlX::Maybe;
 
+use Filesys::DB::FTS::Tokenizer;
+
 GetOptions(
     'config|f=s' => \my $config_file,
 );
@@ -29,15 +31,25 @@ my $store = Filesys::DB->new(
 
 my $dbh = $store->dbh;
 
+# Kill off all indices
+my $dbh_index = $dbh->selectall_arrayref(<<'', { Slice => {}});
+    SELECT name FROM sqlite_master
+     WHERE type == 'index'
+
+for my $index (@$dbh_index) {
+    $dbh->do("drop index $index->{name}");
+}
+#$dbh->do("drop table filesystem_entry_fts5");
+
 #$dbh->do(<<'SQL');
 #    alter table filesystem_entry
 #    rename to filesystem_entry_old
 #SQL
-#$dbh->do(<<'SQL');
-#    drop index idx_filesystem_entry_entry_id
-#SQL
-#
-#$dbh = DBIx::RunSQL->create( sql => 'sql/create.sql', dbh => $dbh );
+
+$dbh->do("drop table filesystem_entry");
+$dbh->do("drop table filesystem_relation");
+
+$dbh = DBIx::RunSQL->create( sql => 'sql/create.sql', dbh => $dbh );
 
 # This assumes that the order of columns doesn't change
 $dbh->do(<<SQL);
