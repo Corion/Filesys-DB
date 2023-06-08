@@ -13,7 +13,7 @@ GetOptions(
     'columns|c=s' => \my @columns,
 );
 
-@columns = 'filename' unless @columns;g
+@columns = 'filename' unless @columns;
 my $sql = join " ", @ARGV;
 
 my $config = {};
