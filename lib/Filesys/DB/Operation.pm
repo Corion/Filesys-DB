@@ -16,6 +16,7 @@ use Digest::SHA;
 use MIME::Detect;
 use Music::Tag 'traditional' => 1;
 use Music::Tag::MP3;
+use lib '../Apache-Tika-Async/lib';
 use Apache::Tika::Server;
 use POSIX 'strftime';
 
