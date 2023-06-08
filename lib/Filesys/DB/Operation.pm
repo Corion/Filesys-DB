@@ -252,7 +252,10 @@ sub update_properties( $self, $info, %options ) {
 
     $do_scan ||= $options{ force };
 
-    if( $do_scan ) {
+    # A callback can add more data that we then use to do more scanning
+    # for example the mime_type is used subsequently for more scanning
+    while( $do_scan ) {
+        $do_scan = 0;
         my @updaters = _applicable_properties( \%file_properties, $info, \%options );
 
         my $status = $self->status;
@@ -266,6 +269,7 @@ sub update_properties( $self, $info, %options ) {
                 $status->( $vis, $info->{filename});
                 if( $cb->($self, $info)) {
                     $info->{last_scanned} = timestamp;
+                    $do_scan = 1;
                 #} else {
                 #    $self->msg->( "no_change,$vis,$info->{filename}");
                 }
