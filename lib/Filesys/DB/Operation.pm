@@ -126,27 +126,39 @@ sub _applicable_properties( $props, $info, $options, $visual='???' ) {
     return @res
 }
 
+sub changed( $r_old, $new ) {
+    my $changed = ( $$r_old // '' ) ne ($new // '')
+                ? 1
+                : 0;
+    $$r_old = $new;
+    $changed
+}
+
 sub extract_content_via_tika( $self, $info ) {
     my $filename = $info->{filename};
 
     state $tika //= do {
         my $t = eval {
-                    Apache::Tika::Server->new(
-            jarfile => '/home/corion/Projekte/Apache-Tika-Async/jar/tika-server-standard-2.3.0.jar',
-            );};
+            Apache::Tika::Server->new(
+                jarfile => '/home/corion/Projekte/Apache-Tika-Async/jar/tika-server-standard-2.8.0.jar',
+            );
+        };
         eval { $t->launch; };
         ! $@ and $t
     };
+
     if($tika) {
+        my $changed;
+
         my $pdf_info = $tika->get_all( $filename );
         if( $pdf_info->meta->{'meta:language'} =~ /^(de|en|fr|zh)$/ ) {
             # I don't expect other languages, except for misdetections
-            $info->{language} = $pdf_info->meta->{'meta:language'};
+            $changed += changed( \($info->{language}), $pdf_info->meta->{'meta:language'});
         }
-        $info->{content}->{title} = $pdf_info->meta->{'dc:title'};
-        $info->{content}->{html} = $pdf_info->content();
+        $changed += changed( \($info->{content}->{title}), $pdf_info->meta->{'dc:title'});
+        $changed += changed( \($info->{content}->{html}), $pdf_info->content());
 
-        return 1;
+        return $changed;
     } else {
         return 0
     }
@@ -157,16 +169,15 @@ sub extract_content_via_audio_tag( $self, $info ) {
     return if $info->{mime_type} eq 'audio/x-scpls';
     return if $info->{mime_type} eq 'audio/x-wav';
 
-    my $res;
+    my $changed;
 
     my $audio_info = audio_info( $info->{filename} );
     for( qw(title artist album track duration)) {
         if( ! defined $info->{content}->{$_}) {
-            $info->{content}->{$_} = $audio_info->{$_};
-            $res = 1;
+            $changed += changed( \($info->{content}->{$_}), $audio_info->{$_});
         }
     };
-    $res;
+    return $changed;
 }
 
 our %file_properties = (
