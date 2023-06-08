@@ -15,6 +15,7 @@ use Filesys::TreeWalker 'scan_tree_bf';
 use Digest::SHA;
 use MIME::Detect;
 use Music::Tag 'traditional' => 1;
+use Music::Tag::MP3;
 use Apache::Tika::Server;
 use POSIX 'strftime';
 
@@ -62,7 +63,7 @@ sub audio_info( $audiofile, $artist=undef, $album=undef ) {
     $info{ album  } //= $album;
     $info{ track  } = sprintf '%02d', $info{ track };
 
-    if( my $tag = $tag->mp3 ) {
+    if( my $tag = $tag->plugin('MP3') ) {
         if( my $mp3 = $tag->{ID3v2} ) {
             if( my $bpm = $mp3->get_frame("TBPM")) {
                 $info{ bpm } = $bpm;
