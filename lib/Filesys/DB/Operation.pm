@@ -146,7 +146,9 @@ sub extract_content_via_tika( $self, $info ) {
         $info->{content}->{html} = $pdf_info->content();
 
         return 1;
-    } else { return 0 }
+    } else {
+        return 0
+    }
 }
 
 sub extract_content_via_audio_tag( $self, $info ) {
