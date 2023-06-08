@@ -248,6 +248,8 @@ sub update_properties( $self, $info, %options ) {
         };
     };
 
+    $do_scan ||= $options{ force };
+
     if( $do_scan ) {
         my @updaters = _applicable_properties( \%file_properties, $info, \%options );
 
@@ -333,7 +335,7 @@ sub do_scan( $self, %options ) {
             };
 
             if( ! $dry_run ) {
-                $info = $self->update_properties( $info, context => $context );
+                $info = $self->update_properties( $info, context => $context, force => $options{ force } );
 
                 # We also want to create a relation here, with our parent directory?!
                 # We also want to create a collection here, with our parent directory?!
