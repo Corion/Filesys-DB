@@ -78,6 +78,7 @@ sub right_ell($str,$len) {
 }
 
 sub query( $search ) {
+    local $Filesys::DB::FTS::Tokenizer::tokenizer_language = 'en';
 
     my $tmp_res = $store->selectall_named(<<'', $search);
         SELECT html
