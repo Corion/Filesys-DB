@@ -98,6 +98,7 @@ sub init_config( $self, %options ) {
 }
 
 # This should go into a separate DBIx role, likely
+# We could Memoize/cache this with the caller location
 sub bind_lexicals( $self, $sql, $level, $lexicals ) {
     croak "Need an SQL string or a prepared DB handle"
         unless $sql;
