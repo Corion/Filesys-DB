@@ -23,7 +23,6 @@ use File::Basename;
 
 use Filesys::DB::FTS::Tokenizer; # so that the tokenizer subroutine is found
 
-
 BEGIN {
 $ENV{HOME} //= $ENV{USERPROFILE}; # to shut up Music::Tag complaining about undefined $ENV{HOME}
 }

@@ -152,9 +152,13 @@ sub extract_content_via_tika( $self, $info ) {
         my $changed;
 
         my $pdf_info = $tika->get_all( $filename );
-        if( $pdf_info->meta->{'meta:language'} =~ /^(de|en|fr|zh)$/ ) {
+        my $lang = $pdf_info->meta->{'meta:language'} // 'en';
+        $lang = 'en' if $lang eq 'th'; # weird misdetection
+
+        if( $lang =~ /^(de|en|fr|zh)$/ ) {
             # I don't expect other languages, except for misdetections
-            $changed += changed( \($info->{language}), $pdf_info->meta->{'meta:language'});
+            # Shouldn't this be ->{content}->{language} ?!
+            $changed += changed( \($info->{language}), $lang);
         }
         $changed += changed( \($info->{content}->{title}), $pdf_info->meta->{'dc:title'});
         $changed += changed( \($info->{content}->{html}), $pdf_info->content());
@@ -294,6 +298,8 @@ sub update_properties( $self, $info, %options ) {
     if( ! $last_ts or ($info->{last_scanned} // '' ) ne $last_ts ) {
         #msg( sprintf "% 8s | %s", 'update', $file);
         # $self->msg->( "update,$info->{filename} ( $info->{last_scanned} <=> $last_ts )");
+        local $Filesys::DB::FTS::Tokenizer::tokenizer_language = $info->{language};
+
         $info = $self->do_update($info);
     }
     return $info
