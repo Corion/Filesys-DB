@@ -86,6 +86,7 @@ sub query( $search ) {
             , fts.title
             , fts.entry_id
             , highlight(filesystem_entry_fts5, 0, '<-mark->', '</-mark->') as snippet
+            , fs.filename
             , fs.sha256
         FROM filesystem_entry_fts5 fts
         JOIN filesystem_entry fs
@@ -138,7 +139,50 @@ sub document( $id ) {
     }
 }
 
+sub collections( $id ) {
+    my $tmp_res = $store->selectall_named(<<'', $id);
+    with containers as (
+        select c.collection_id
+          from filesystem_entry fs
+          join filesystem_membership m on fs.entry_id = m.entry_id
+          join filesystem_collection c on m.collection_id = c.collection_id
+         where fs.sha256 = :id
+    )
+        select fs.entry_json
+             , fs.entry_id
+             , fs.sha256
+             , fs.title
+             , fs.filename
+             , c.title as collection_title
+             , cont.collection_id
+          from containers cont
+          join filesystem_collection c on cont.collection_id = c.collection_id
+          join filesystem_membership m on m.collection_id = cont.collection_id
+          join filesystem_entry fs on m.entry_id = fs.entry_id
+         order by c.collection_id, m.position, fs.entry_id
 
+    if( $tmp_res ) {
+
+        # Re-munge the result
+        my @res;
+        for my $row (@$tmp_res) {
+            state $last_coll = 0;
+            state $curr;
+            if( $last_coll != $row->{collection_id}) {
+                $curr = { %$row }; # well, not everything, but we don't care
+                $curr->{entries} = [];
+                push @res, $curr;
+            }
+            push $curr->{entries}->@*, $row;
+
+            $last_coll = $row->{collection_id};
+        }
+
+        return \@res
+    } else {
+        return
+    }
+}
 
 get '/' => sub( $c ) {
     $c->stash( query => undef, rows => undef );
@@ -158,6 +202,13 @@ get '/doc/:id' => sub( $c ) {
     $c->render('doc');
 };
 
+get '/dir/:id' => sub( $c ) {
+    my $document = document( $c->param('id'));
+    my $collections = collections( $c->param('id'));
+    $c->stash( document => $document, collections => $collections );
+    $c->render('collections');
+};
+
 
 app->start;
 
@@ -174,6 +225,7 @@ __DATA__
 %     for my $row (@$rows) {
 <div>
 <h3><a href="/doc/<%= $row->{sha256} %>"><%= $row->{title} %></a></h3>
+<small id="filename"><a href="/dir/<%= $row->{sha256} %>" id="link_directory"><%= $row->{filename} %></a></small>
 <div><%== $row->{snippet} %></div>
 </div>
 %     }
@@ -193,3 +245,23 @@ __DATA__
 </div>
 </body>
 </html>
+
+@@collections.html.ep
+<!DOCTYPE html>
+<html>
+<body>
+% if( $collections ) {
+%     for my $coll (@$collections) {
+<h2><%= $coll->{collection_title} %></h2>
+%         for my $entry ($coll->{entries}->@*) {
+<div>
+<h3><a href="/doc/<%= $entry->{sha256} %>"><%= $entry->{title} %></a></h3>
+<small id="filename"><a href="/dir/<%= $entry->{sha256} %>" id="link_directory"><%= $entry->{filename} %></a></small>
+<div><%== $entry->{snippet} %></div>
+</div>
+%          }
+%     }
+% }
+</body>
+</html>
+
