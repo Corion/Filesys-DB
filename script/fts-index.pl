@@ -18,8 +18,10 @@ GetOptions(
     'config|f=s' => \my $config_file,
 );
 
+# Should we have a "rebuild complete index" option?!
+
 my $sql = join " ", @ARGV;
-$sql //= <<'SQL';
+$sql ||= <<'SQL';
         html is not null
     and mime_type='application/pdf'
 SQL
@@ -55,17 +57,24 @@ my $store = Filesys::DB->new(
 
 my @docs = $store->_inflate_sth( $store->entries( undef, $sql ));
 
+# Do we want this manual indexing?
+# We could simply "insert into ... select (html, title, language, entry_id) from ..."
 for my $doc (@docs) {
     my( $entry_id) = $doc->{ 'entry_id' };
     my( $html) = $doc->{ content }->{ html };
     my( $title ) = $doc->{ content }->{ title };
 
-    local $Filesys::DB::FTS::Tokenizer::tokenizer_language = $doc->{content}->{language};
+    # XXX move language to content->language
+    my $language = $doc->{language};
+    local $Filesys::DB::FTS::Tokenizer::tokenizer_language = $language;
 
-    my $language = $doc->{content}->{language};
+    my $tmp_res = $store->selectall_named(<<'', $entry_id )->[0];
+        DELETE
+          FROM filesystem_entry_fts5
+         WHERE entry_id = :entry_id
 
     my $tmp_res = $store->selectall_named(<<'', $entry_id, $language, $html, $title )->[0];
-        INSERT INTO filesystem_entry_fts5(content, title, language, entry_id)
+        INSERT INTO filesystem_entry_fts5(html, title, language, entry_id)
              VALUES(:html, :title, :language, :entry_id)
 
 }
