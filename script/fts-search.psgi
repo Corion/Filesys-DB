@@ -218,6 +218,9 @@ get '/dir/:id' => sub( $c ) {
     $c->render('collections');
 };
 
+# [ ] Add filters
+# [ ] Highlight the search word in the document view too
+# [ ] Filter on language
 
 app->start;
 
