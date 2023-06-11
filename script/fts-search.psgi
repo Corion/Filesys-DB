@@ -100,7 +100,7 @@ sub query( $search ) {
     for (@$tmp_res) {
         # Strip HTML tags ?
 
-        my @parts = split m!(?=<-mark->)!g, $_->{snippet};
+        my @parts = split m!(?=<-mark->)!, $_->{snippet};
 
         for ( @parts ) {
             if( /<-mark->/ ) {
