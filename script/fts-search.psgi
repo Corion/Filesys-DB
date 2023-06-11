@@ -81,12 +81,16 @@ sub query( $search ) {
     local $Filesys::DB::FTS::Tokenizer::tokenizer_language = 'en';
 
     my $tmp_res = $store->selectall_named(<<'', $search);
-        SELECT html
-            , title
-            , entry_id
+        SELECT
+              fts.html
+            , fts.title
+            , fts.entry_id
             , highlight(filesystem_entry_fts5, 0, '<-mark->', '</-mark->') as snippet
-        FROM filesystem_entry_fts5
-        where html MATCH :search
+            , fs.sha256
+        FROM filesystem_entry_fts5 fts
+        JOIN filesystem_entry fs
+          ON fs.entry_id = fts.entry_id
+        where fts.html MATCH :search
     order by rank
 
     # prepare for output
@@ -105,7 +109,7 @@ sub document( $id ) {
     my $tmp_res = $store->selectall_named(<<'', $id);
         SELECT *
         FROM filesystem_entry
-        where entry_id = :id
+        where sha256 = :id
 
     if( $tmp_res ) {
         return $tmp_res->[0]
@@ -149,7 +153,7 @@ __DATA__
 % if( $rows ) {
 %     for my $row (@$rows) {
 <div>
-<a href="/doc/<%= $row->{entry_id} %>"><%= $row->{title} %></a><br />
+<a href="/doc/<%= $row->{sha256} %>"><%= $row->{title} %></a><br />
 <div><%== $row->{snippet} %></div>
 </div>
 %     }
