@@ -214,6 +214,13 @@ app->start;
 
 __DATA__
 
+@@_document.html.ep
+<div>
+<h3><a href="/doc/<%= $row->{sha256} %>"><%= $row->{title} %></a></h3>
+<small id="filename"><%= $row->{mtime} %> - <a href="/dir/<%= $row->{sha256} %>" id="link_directory"><%= $row->{filename} %></a></small>
+<div><%== $row->{snippet} // "" %></div>
+</div>
+
 @@index.html.ep
 <!DOCTYPE html>
 <html>
@@ -223,11 +230,7 @@ __DATA__
 </form>
 % if( $rows ) {
 %     for my $row (@$rows) {
-<div>
-<h3><a href="/doc/<%= $row->{sha256} %>"><%= $row->{title} %></a></h3>
-<small id="filename"><a href="/dir/<%= $row->{sha256} %>" id="link_directory"><%= $row->{filename} %></a></small>
-<div><%== $row->{snippet} %></div>
-</div>
+%= include '_document', row => $row
 %     }
 % }
 </body>
@@ -254,11 +257,7 @@ __DATA__
 %     for my $coll (@$collections) {
 <h2><%= $coll->{collection_title} %></h2>
 %         for my $entry ($coll->{entries}->@*) {
-<div>
-<h3><a href="/doc/<%= $entry->{sha256} %>"><%= $entry->{title} %></a></h3>
-<small id="filename"><a href="/dir/<%= $entry->{sha256} %>" id="link_directory"><%= $entry->{filename} %></a></small>
-<div><%== $entry->{snippet} %></div>
-</div>
+%= include '_document', row => $entry
 %          }
 %     }
 % }
