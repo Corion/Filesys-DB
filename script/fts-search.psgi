@@ -127,13 +127,28 @@ sub query( $search ) {
     return $tmp_res
 }
 
-sub document( $id ) {
-    my $tmp_res = $store->selectall_named(<<'', $id);
-        SELECT *
-        FROM filesystem_entry
+sub document( $id, $search=undef ) {
+    my ($highlight, $query);
+    if( defined ($search)) {
+        $highlight = "highlight(filesystem_entry_fts5, 0, '<-mark->', '</-mark->') as snippet";
+        $query     = "and (fts.html MATCH :search)";
+    } else {
+        $highlight = 'html as snippet';
+        $query     = "and (:search is null)";
+    };
+    warn "$query";
+    my $tmp_res = $store->selectall_named(<<"", $id, $search);
+        SELECT
+            fs.*
+          , $highlight
+        FROM filesystem_entry fs
+        JOIN filesystem_entry_fts5 fts
+          ON fs.entry_id = fts.entry_id
         where sha256 = :id
+          $query
 
     if( $tmp_res ) {
+        $tmp_res->[0]->{snippet} =~ s!<(/)?-mark->!<${1}b>!g;
         return $tmp_res->[0]
     } else {
         return
@@ -194,20 +209,21 @@ get '/' => sub( $c ) {
 get '/index.html' => sub( $c ) {
     my $search = $c->param('q');
     my $rows = query( $search );
-    $c->stash( query => $search, rows => $rows );
+    $c->stash( query => $search, rows => $rows, query => $search );
     $c->render('index');
 };
 
 post '/index.html' => sub( $c ) {
     my $search = $c->param('q');
     my $rows = query( $search );
-    $c->stash( query => $search, rows => $rows );
+    $c->stash( query => $search, rows => $rows, query => $search );
     $c->render('index');
 };
 
 get '/doc/:id' => sub( $c ) {
-    my $document = document( $c->param('id'));
-    $c->stash( document => $document );
+    my $search = $c->param('q');
+    my $document = document( $c->param('id'), $search);
+    $c->stash( document => $document, query => $search );
     $c->render('doc');
 };
 
@@ -219,7 +235,6 @@ get '/dir/:id' => sub( $c ) {
 };
 
 # [ ] Add filters
-# [ ] Highlight the search word in the document view too
 # [ ] Filter on language
 
 app->start;
@@ -228,7 +243,7 @@ __DATA__
 
 @@_document.html.ep
 <div>
-<h3><a href="/doc/<%= $row->{sha256} %>"><%= $row->{title} %></a></h3>
+<h3><a href="/doc/<%= $row->{sha256} %>?q=<%= $query %>"><%= $row->{title} %></a></h3>
 <small id="filename"><%= $row->{mtime} %> - <a href="/dir/<%= $row->{sha256} %>" id="link_directory"><%= $row->{filename} %></a></small>
 <div><%== $row->{snippet} // "" %></div>
 </div>
@@ -242,7 +257,7 @@ __DATA__
 </form>
 % if( $rows ) {
 %     for my $row (@$rows) {
-%= include '_document', row => $row
+%= include '_document', row => $row, query => $query
 %     }
 % }
 </body>
@@ -256,7 +271,7 @@ __DATA__
 <p><%= $document->{filename} %></p>
 <h1><%= $document->{title} %></h1>
 <div id="content">
-<%== $document->{html} %>
+<%== $document->{snippet} %>
 </div>
 </body>
 </html>
@@ -269,7 +284,7 @@ __DATA__
 %     for my $coll (@$collections) {
 <h2><%= $coll->{collection_title} %></h2>
 %         for my $entry ($coll->{entries}->@*) {
-%= include '_document', row => $entry
+%= include '_document', row => $entry, query => $query
 %          }
 %     }
 % }
