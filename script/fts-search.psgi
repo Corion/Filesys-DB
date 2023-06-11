@@ -96,10 +96,30 @@ sub query( $search ) {
     # prepare for output
     my $context = 30;
     for (@$tmp_res) {
-        # Strip other HTML tags ?
-        $_->{snippet} =~ s!\A(.*?)<-mark->!left_ell($1,$context)."<-mark->"!ems;
+        # Strip HTML tags ?
+
+        my @parts = split m!(?=<-mark->)!g, $_->{snippet};
+
+        for ( @parts ) {
+            if( /<-mark->/ ) {
+
+                s!\A(.*?)<-mark->!left_ell($1,$context)."<-mark->"!ems;
+                s!</-mark->(.*?)\z!"</-mark->".right_ell($1,$context)!ems;
+                s!<-mark->!<b>!;
+                s!</-mark->!</b>!;
+
+
+                # but how do we handle things between two matches that are short?!
+                # bar</-mark>foo<-mark->baz will turn into bar</-mark>foo... ...foo<-mark->baz
+
+            } else {
+                $_ = left_ell($_, $context);
+            }
+        }
+
+        $_->{snippet} = join "", @parts;
+
         $_->{snippet} =~ s!</-mark->(.*?)<-mark->!"</-mark->".mid_ell($1,$context)."<-mark->"!gems;
-        $_->{snippet} =~ s!</-mark->(.*?)\z!"</-mark->".right_ell($1,$context)!ems;
         $_->{snippet} =~ s!<(/?)-mark->!<${1}b>!g;
     }
     return $tmp_res
@@ -148,12 +168,12 @@ __DATA__
 <html>
 <body>
 <form method="POST" action="/index.html">
-<input name="q" type="text" value="<%= $query %>"/>
+<input name="q" type="text" value="<%= $query %>"/><button type="submit">Search</button>
 </form>
 % if( $rows ) {
 %     for my $row (@$rows) {
 <div>
-<a href="/doc/<%= $row->{sha256} %>"><%= $row->{title} %></a><br />
+<h3><a href="/doc/<%= $row->{sha256} %>"><%= $row->{title} %></a></h3>
 <div><%== $row->{snippet} %></div>
 </div>
 %     }
