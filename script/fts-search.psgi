@@ -165,9 +165,9 @@ sub collections( $id ) {
 
         # Re-munge the result
         my @res;
+        my $last_coll = 0;
+        my $curr;
         for my $row (@$tmp_res) {
-            state $last_coll = 0;
-            state $curr;
             if( $last_coll != $row->{collection_id}) {
                 $curr = { %$row }; # well, not everything, but we don't care
                 $curr->{entries} = [];
