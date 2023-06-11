@@ -88,6 +88,7 @@ sub query( $search ) {
             , highlight(filesystem_entry_fts5, 0, '<-mark->', '</-mark->') as snippet
             , fs.filename
             , fs.sha256
+            , strftime('%Y-%m-%d %H:%M', datetime(fs.mtime, 'unixepoch')) as mtime
         FROM filesystem_entry_fts5 fts
         JOIN filesystem_entry fs
           ON fs.entry_id = fts.entry_id
@@ -153,6 +154,7 @@ sub collections( $id ) {
              , fs.sha256
              , fs.title
              , fs.filename
+             , strftime('%Y-%m-%d %H:%M', datetime(fs.mtime, 'unixepoch')) as mtime
              , c.title as collection_title
              , cont.collection_id
           from containers cont
