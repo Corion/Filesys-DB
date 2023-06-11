@@ -4,7 +4,7 @@ use Mojolicious::Lite;
 use feature 'signatures';
 no warnings 'experimental::signatures';
 
-
+use Encode 'decode';
 use Filesys::DB;
 use DBIx::RunSQL;
 use Getopt::Long;
@@ -19,6 +19,9 @@ use Filesys::DB::FTS::Tokenizer;
 #    'alias|a=s' => \my $mount_alias,
 #    'config|f=s' => \my $config_file,
 #);
+
+binmode STDOUT, ':encoding(UTF-8)';
+binmode STDERR, ':encoding(UTF-8)';
 
 my $config_file;
 my $mount_alias;
@@ -80,6 +83,8 @@ sub right_ell($str,$len) {
 sub query( $search ) {
     local $Filesys::DB::FTS::Tokenizer::tokenizer_language = 'en';
 
+    warn "SEARCH for [[$search]]";
+
     my $tmp_res = $store->selectall_named(<<'', $search);
         SELECT
               fts.html
@@ -100,6 +105,10 @@ sub query( $search ) {
     for (@$tmp_res) {
         # Strip HTML tags ?
 
+        $_->{html} = decode('UTF-8',$_->{html});
+        $_->{title} = decode('UTF-8',$_->{title});
+        $_->{snippet} = decode('UTF-8',$_->{snippet});
+
         my @parts = split m!(?=<-mark->)!, $_->{snippet};
 
         for ( @parts ) {
@@ -119,36 +128,30 @@ sub query( $search ) {
             }
         }
 
-        $_->{snippet} = join "", @parts;
-
         $_->{snippet} =~ s!</-mark->(.*?)<-mark->!"</-mark->".mid_ell($1,$context)."<-mark->"!gems;
         $_->{snippet} =~ s!<(/?)-mark->!<${1}b>!g;
+        $_->{snippet} = join "", @parts;
+
     }
     return $tmp_res
 }
 
+# Can we do manual highlighting here?!
+# We would need to re-tokenize and highlight things ourselves?!
 sub document( $id, $search=undef ) {
     my ($highlight, $query);
-    if( defined ($search)) {
-        $highlight = "highlight(filesystem_entry_fts5, 0, '<-mark->', '</-mark->') as snippet";
-        $query     = "and (fts.html MATCH :search)";
-    } else {
-        $highlight = 'html as snippet';
-        $query     = "and (:search is null)";
-    };
-    warn "$query";
-    my $tmp_res = $store->selectall_named(<<"", $id, $search);
+    my $sql = <<"";
         SELECT
-            fs.*
-          , $highlight
-        FROM filesystem_entry fs
-        JOIN filesystem_entry_fts5 fts
-          ON fs.entry_id = fts.entry_id
-        where sha256 = :id
-          $query
+               fs.*
+             , fs.html as snippet
+          FROM filesystem_entry fs
+         WHERE fs.sha256 = :id
+
+    my $tmp_res = $store->selectall_named($sql, $id, $search);
 
     if( $tmp_res ) {
         $tmp_res->[0]->{snippet} =~ s!<(/)?-mark->!<${1}b>!g;
+        $tmp_res->[0]->{snippet} = decode('UTF-8', $tmp_res->[0]->{snippet});
         return $tmp_res->[0]
     } else {
         return
@@ -190,6 +193,7 @@ sub collections( $id ) {
                 $curr->{entries} = [];
                 push @res, $curr;
             }
+            $row->{title} = decode('UTF-8', $row->{title});
             push $curr->{entries}->@*, $row;
 
             $last_coll = $row->{collection_id};
@@ -208,7 +212,7 @@ get '/' => sub( $c ) {
 
 get '/index.html' => sub( $c ) {
     my $search = $c->param('q');
-    my $rows = query( $search );
+    my $rows = length($search) ? query( $search ) : undef;
     $c->stash( query => $search, rows => $rows, query => $search );
     $c->render('index');
 };
@@ -228,14 +232,16 @@ get '/doc/:id' => sub( $c ) {
 };
 
 get '/dir/:id' => sub( $c ) {
+    my $search = $c->param('q');
     my $document = document( $c->param('id'));
     my $collections = collections( $c->param('id'));
-    $c->stash( document => $document, collections => $collections );
+    $c->stash( document => $document, collections => $collections, query => $search );
     $c->render('collections');
 };
 
 # [ ] Add filters
 # [ ] Filter on language
+# [ ] Fix the encoding of our output
 
 app->start;
 
