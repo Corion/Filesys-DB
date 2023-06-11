@@ -191,6 +191,13 @@ get '/' => sub( $c ) {
     $c->render('index');
 };
 
+get '/index.html' => sub( $c ) {
+    my $search = $c->param('q');
+    my $rows = query( $search );
+    $c->stash( query => $search, rows => $rows );
+    $c->render('index');
+};
+
 post '/index.html' => sub( $c ) {
     my $search = $c->param('q');
     my $rows = query( $search );
