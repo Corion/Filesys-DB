@@ -17,6 +17,7 @@ GetOptions(
     'mountpoint|m=s' => \my $mountpoint,
     'alias|a=s' => \my $mount_alias,
     'config|f=s' => \my $config_file,
+    'wipe' => \my $wipe_fts,
 );
 
 my $thesaurus = Filesys::DB::FTS::Thesaurus->load('thesaurus-ecb.yaml');
@@ -61,6 +62,12 @@ my $store = Filesys::DB->new(
 my @docs = $store->_inflate_sth( $store->entries( undef, $sql ));
 
 my $thesaurus = Filesys::DB::FTS::Thesaurus->load('thesaurus-ecb.yaml');
+
+if( $wipe_fts ) {
+    $store->dbh->do(<<'SQL');
+        delete from filesystem_entry_fts5
+SQL
+}
 
 # Do we want this manual indexing?
 # We could simply "insert into ... select (html, title, language, entry_id) from ..."

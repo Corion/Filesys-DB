@@ -242,7 +242,6 @@ get '/dir/:id' => sub( $c ) {
     $c->render('collections');
 };
 
-# [ ] Use a different tokenizer for search than for indexing
 # [ ] Add filters
 # [ ] Filter on language
 # [ ] Fix the encoding of our output

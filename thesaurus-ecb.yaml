@@ -1,9 +1,9 @@
 ---
-"ecb": "european central bank"
-"european central bank": "ecb"
-"GBP":
-    - "pound sterling"
-    - "british pound"
-"GBP":
-    - "pound sterling"
-    - "british pound"
+# we can't do multi-word synonyms!
+"ECB":
+    - european
+    - central
+    - bank
+central: "ecb"
+"pound":
+    - "GBP"
