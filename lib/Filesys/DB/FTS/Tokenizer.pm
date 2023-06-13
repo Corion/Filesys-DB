@@ -5,12 +5,15 @@ use feature 'signatures';
 
 use Lingua::Stem;
 use Lingua::Stem::Cistem;
+use Text::Unidecode;
 
 use DBD::SQLite 1.71; # actually, our patched 1.71_06
 use DBD::SQLite::Constants ':fts5_tokenizer';
 use locale;
 our $tokenizer_language;
 our $thesaurus;
+
+require bytes; # we need to look at byte counts of UTF-8 encoded strings
 
 sub get_stemmer( $language ) {
     if( not defined $language ) {
@@ -36,20 +39,28 @@ sub get_stemmer( $language ) {
 # We convert the HTML to ['text',startpos,endpos]
 sub locale_tika_tokenizer { # see also: Search::Tokenizer
     return sub( $ctx, $string, $tokenizer_context_flags ) {
+    Encode::_utf8_on($string); # we assume we get UTF-8 from SQLite
+
     my $stemmer = get_stemmer( $tokenizer_language );
+    #warn sprintf "%04x", $tokenizer_context_flags;
+
+    # We want Unicode regex match semantics, but we need to pass the offsets
+    # in bytes to SQLite. Hence we use bytes::length to get the byte offsets.
 
     my @res;
     # Find next non-tag chunk:
     my $start_ofs;
     while( $string =~ /(?:^|>)([^<>]*)(?:<|$)/g ) {
         # Extract tokens from that part
-        $start_ofs = $-[1];
+        #$start_ofs = $-[1];
+        $start_ofs = bytes::length($`); # offset of our string, as represented by length of stuff before our string
         my $run = $1;
-        while( $run =~ /(\w+)/g ) {
+        while( $run =~ /([^\pP\s]+)/g ) {
             # push @res, [$1,$start_ofs+$-[0], $+[0]];
-            my ($start, $end) = ($-[0], $+[0]);
+            my ($start, $end) = (bytes::length($`), bytes::length($`)+bytes::length($1)+1);
             #my $term = substr($string, $start, my $len = $end-$start);
             my $term = "$1";
+
             $start += $start_ofs;
             $end   += $start_ofs;
 
@@ -60,6 +71,15 @@ sub locale_tika_tokenizer { # see also: Search::Tokenizer
 
             my @collocated = $stemmer->($term);
 
+            # also provide the flattened version
+            # do we really want that?! Only when indexing, not when querying!
+            if($tokenizer_context_flags & FTS5_TOKENIZE_DOCUMENT) {
+                my $flat = lc unidecode($term);
+                if( fc $flat ne fc $term ) {
+                    push @collocated, lc $flat;
+                }
+            }
+
             # also push synonyms here
             if( $thesaurus and my $synonyms = $thesaurus->dictionary->{ lc $term } ) {
                 #warn sprintf "%s -> %s", lc $term, join ", ", @$synonyms;
@@ -69,6 +89,8 @@ sub locale_tika_tokenizer { # see also: Search::Tokenizer
             $flags = FTS5_TOKEN_COLOCATED;
             for my $t (@collocated) {
                 if( fc $t ne fc $term ) {
+                    #warn "Query for $term; $t" if $tokenizer_context_flags == FTS5_TOKENIZE_QUERY;
+                    #warn "Index for $term; $t" if $tokenizer_context_flags == FTS5_TOKENIZE_DOCUMENT;
                     DBD::SQLite::db::fts5_xToken($ctx,$flags,$t,$start,$end);
                 }
             }
