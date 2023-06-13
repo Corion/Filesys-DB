@@ -6,6 +6,7 @@ no warnings 'experimental::signatures';
 
 use Filesys::DB;
 use Filesys::DB::FTS::Tokenizer;
+use Filesys::DB::FTS::Thesaurus;
 use DBIx::RunSQL;
 use Getopt::Long;
 use YAML 'LoadFile';
@@ -17,6 +18,8 @@ GetOptions(
     'alias|a=s' => \my $mount_alias,
     'config|f=s' => \my $config_file,
 );
+
+my $thesaurus = Filesys::DB::FTS::Thesaurus->load('thesaurus-ecb.yaml');
 
 # Should we have a "rebuild complete index" option?!
 
@@ -57,6 +60,8 @@ my $store = Filesys::DB->new(
 
 my @docs = $store->_inflate_sth( $store->entries( undef, $sql ));
 
+my $thesaurus = Filesys::DB::FTS::Thesaurus->load('thesaurus-ecb.yaml');
+
 # Do we want this manual indexing?
 # We could simply "insert into ... select (html, title, language, entry_id) from ..."
 for my $doc (@docs) {
@@ -68,6 +73,8 @@ for my $doc (@docs) {
     my $language = $doc->{language};
     local $Filesys::DB::FTS::Tokenizer::tokenizer_language = $language;
 
+    local $Filesys::DB::FTS::Tokenizer::thesaurus = $thesaurus;
+
     my $tmp_res = $store->selectall_named(<<'', $entry_id )->[0];
         DELETE
           FROM filesystem_entry_fts5
@@ -78,3 +85,4 @@ for my $doc (@docs) {
              VALUES(:html, :title, :language, :entry_id)
 
 }
+

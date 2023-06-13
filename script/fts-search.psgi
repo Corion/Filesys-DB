@@ -13,6 +13,7 @@ use PerlX::Maybe;
 use Text::Table;
 
 use Filesys::DB::FTS::Tokenizer;
+use Filesys::DB::FTS::Thesaurus;
 
 #GetOptions(
 #    'mountpoint|m=s' => \my $mountpoint,
@@ -26,6 +27,8 @@ binmode STDERR, ':encoding(UTF-8)';
 my $config_file;
 my $mount_alias;
 my $mountpoint;
+
+my $thesaurus = Filesys::DB::FTS::Thesaurus->load('thesaurus-search.yaml');
 
 my $config = {};
 my $user_config = {};
@@ -81,9 +84,9 @@ sub right_ell($str,$len) {
 }
 
 sub query( $search ) {
+    # XXX detect the language from the snippet? Maybe using trigrams? Or have the user select it?
     local $Filesys::DB::FTS::Tokenizer::tokenizer_language = 'en';
-
-    warn "SEARCH for [[$search]]";
+    local $Filesys::DB::FTS::Tokenizer::thesaurus = $thesaurus;
 
     my $tmp_res = $store->selectall_named(<<'', $search);
         SELECT
@@ -239,6 +242,7 @@ get '/dir/:id' => sub( $c ) {
     $c->render('collections');
 };
 
+# [ ] Use a different tokenizer for search than for indexing
 # [ ] Add filters
 # [ ] Filter on language
 # [ ] Fix the encoding of our output

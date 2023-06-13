@@ -10,6 +10,7 @@ use DBD::SQLite 1.71; # actually, our patched 1.71_06
 use DBD::SQLite::Constants ':fts5_tokenizer';
 use locale;
 our $tokenizer_language;
+our $thesaurus;
 
 sub get_stemmer( $language ) {
     if( not defined $language ) {
@@ -55,15 +56,19 @@ sub locale_tika_tokenizer { # see also: Search::Tokenizer
             # say sprintf "%s <%s>", $term, substr( $string, $start, $end-$start);
 
             my $flags = 0;
-            DBD::SQLite::db::fts5_xToken($ctx,$flags,$term,$start,$end);
+            DBD::SQLite::db::fts5_xToken($ctx,$flags,lc $term,$start,$end);
 
             my @collocated = $stemmer->($term);
 
             # also push synonyms here
+            if( $thesaurus and my $synonyms = $thesaurus->dictionary->{ lc $term } ) {
+                #warn sprintf "%s -> %s", lc $term, join ", ", @$synonyms;
+                push @collocated, $stemmer->($synonyms->@*);
+            }
 
             $flags = FTS5_TOKEN_COLOCATED;
             for my $t (@collocated) {
-                if( $t ne $term ) {
+                if( fc $t ne fc $term ) {
                     DBD::SQLite::db::fts5_xToken($ctx,$flags,$t,$start,$end);
                 }
             }
