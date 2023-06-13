@@ -23,6 +23,15 @@ create table filesystem_entry (
     , mime_type    generated always as (json_extract(entry_json, '$.mime_type'))  stored
     , entry_type   generated always as (json_extract(entry_json, '$.entry_type')) stored
 
+    -- PDF files contain images, archive files contain other files
+    , is_container generated always as (json_extract(entry_json, '$.is_container')) stored
+	-- the entry_id of the container file?!
+	-- or do we want this as a separate table?!
+	-- the filename will be the name of the container, with the internal resource name added?!
+    , contained_by generated always as (json_extract(entry_json, '$.contained_by')) stored
+	-- do we (optionally) store a copy of the content in a "blobs" table?!
+	-- possibly indexed by the MD5 instead of the entry id?!
+
       -- these are all unversioned in the sense that an update of the extractor
       -- mechanism won't update these
       -- also we should have metadata like "last updated" etc?
