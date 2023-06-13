@@ -244,6 +244,9 @@ get '/dir/:id' => sub( $c ) {
 
 # [ ] Add filters
 # [ ] Filter on language
+# [ ] Filter on author
+# [ ] Filter on collection
+# [ ] Filter on year/time
 
 app->start;
 
