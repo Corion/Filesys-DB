@@ -91,12 +91,10 @@ sub query( $search ) {
     my $tmp_res = $store->selectall_named(<<'', $search);
         SELECT
               fts.html
-            , fts.title
             , fts.entry_id
             , highlight(filesystem_entry_fts5, 0, '<-mark->', '</-mark->') as snippet
             , fs.filename
-            , fs.sha256
-            , strftime('%Y-%m-%d %H:%M', datetime(fs.mtime, 'unixepoch')) as mtime
+            , fs.entry_json
         FROM filesystem_entry_fts5 fts
         JOIN filesystem_entry fs
           ON fs.entry_id = fts.entry_id
@@ -112,7 +110,11 @@ sub query( $search ) {
         $_->{title} = decode('UTF-8',$_->{title});
         $_->{snippet} = decode('UTF-8',$_->{snippet});
 
-        my @parts = split m!(?=<-mark->)!, $_->{snippet};
+        my $r = $store->_inflate_entry( $_ );
+        $r->{snippet} = $_->{snippet};
+        $_ = $r;
+
+        my @parts = split m!(?=<-mark->)!, $r->{snippet};
 
         for ( @parts ) {
             if( /<-mark->/ ) {
@@ -148,7 +150,8 @@ sub document( $id, $search=undef ) {
 
        my $sql = <<"";
         SELECT
-              fs.*
+              fs.entry_json
+            , fs.entry_id
             , highlight(filesystem_entry_fts5, 0, '<-mark->', '</-mark->') as snippet
           FROM filesystem_entry fs
           JOIN filesystem_entry_fts5 fts
@@ -171,9 +174,13 @@ sub document( $id, $search=undef ) {
 
 
     if( $res ) {
-        $res->[0]->{snippet} =~ s!<(/?)-mark->!<${1}b>!g;
         $res->[0]->{snippet} = decode('UTF-8', $res->[0]->{snippet});
-        return $res->[0]
+
+        my $r = $store->_inflate_entry( $res->[0] );
+        $r->{snippet} = $res->[0]->{snippet};
+        $r->{snippet} =~ s!<(/?)-mark->!<${1}b>!g;
+        return $r
+
     } else {
         return
     }
@@ -190,10 +197,6 @@ sub collections( $id ) {
     )
         select fs.entry_json
              , fs.entry_id
-             , fs.sha256
-             , fs.title
-             , fs.filename
-             , strftime('%Y-%m-%d %H:%M', datetime(fs.mtime, 'unixepoch')) as mtime
              , c.title as collection_title
              , cont.collection_id
           from containers cont
@@ -209,12 +212,15 @@ sub collections( $id ) {
         my $last_coll = 0;
         my $curr;
         for my $row (@$tmp_res) {
+
+            my $r = $store->_inflate_entry( $row );
+            %$row = (%$r, %$row);
+
             if( $last_coll != $row->{collection_id}) {
                 $curr = { %$row }; # well, not everything, but we don't care
                 $curr->{entries} = [];
                 push @res, $curr;
             }
-            $row->{title} = decode('UTF-8', $row->{title});
             push $curr->{entries}->@*, $row;
 
             $last_coll = $row->{collection_id};
@@ -266,15 +272,20 @@ get '/dir/:id' => sub( $c ) {
 # [ ] Filter on author
 # [ ] Filter on collection
 # [ ] Filter on year/time
+# with X MATCH Y as matches (
+#     select distinct collection_name, collection_id where matches.contains entry
+# )
+#
 
 app->start;
 
 __DATA__
 
 @@_document.html.ep
+% use POSIX 'strftime';
 <div>
-<h3><a href="/doc/<%= $row->{sha256} %>?q=<%= $query %>"><%= $row->{title} %></a></h3>
-<small id="filename"><%= $row->{mtime} %> - <a href="/dir/<%= $row->{sha256} %>" id="link_directory"><%= $row->{filename} %></a></small>
+<h3><small><%= $row->{language} %></small> <a href="/doc/<%= $row->{sha256} %>?q=<%= $query %>"><%= $row->{content}->{title} // '<no title>' %></a></h3>
+<small id="filename"><%= strftime '%Y-%m-%d %H:%M', localtime( $row->{mtime}) %> - <a href="/dir/<%= $row->{sha256} %>" id="link_directory"><%= $row->{filename} %></a></small>
 <div><%== $row->{snippet} // "" %></div>
 </div>
 
