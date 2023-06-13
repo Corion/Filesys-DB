@@ -142,20 +142,38 @@ sub query( $search ) {
 # Can we do manual highlighting here?!
 # We would need to re-tokenize and highlight things ourselves?!
 sub document( $id, $search=undef ) {
-    my ($highlight, $query);
-    my $sql = <<"";
+    my ($res);
+
+    if( defined $search and length $search ) {
+
+       my $sql = <<"";
         SELECT
-               fs.*
-             , fs.html as snippet
+              fs.*
+            , highlight(filesystem_entry_fts5, 0, '<-mark->', '</-mark->') as snippet
+          FROM filesystem_entry fs
+          JOIN filesystem_entry_fts5 fts
+            ON fs.entry_id = fts.entry_id
+         WHERE fs.sha256 = :id
+           AND fts.html MATCH :search
+
+        $res = $store->selectall_named($sql, $id, $search);
+
+    } else {
+       my $sql = <<"";
+        SELECT
+              fs.*
+            , fs.html as snippet
           FROM filesystem_entry fs
          WHERE fs.sha256 = :id
 
-    my $tmp_res = $store->selectall_named($sql, $id, $search);
+        $res = $store->selectall_named($sql, $id);
+    }
 
-    if( $tmp_res ) {
-        $tmp_res->[0]->{snippet} =~ s!<(/)?-mark->!<${1}b>!g;
-        $tmp_res->[0]->{snippet} = decode('UTF-8', $tmp_res->[0]->{snippet});
-        return $tmp_res->[0]
+
+    if( $res ) {
+        $res->[0]->{snippet} =~ s!<(/?)-mark->!<${1}b>!g;
+        $res->[0]->{snippet} = decode('UTF-8', $res->[0]->{snippet});
+        return $res->[0]
     } else {
         return
     }
