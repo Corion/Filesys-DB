@@ -244,7 +244,6 @@ get '/dir/:id' => sub( $c ) {
 
 # [ ] Add filters
 # [ ] Filter on language
-# [ ] Fix the encoding of our output
 
 app->start;
 
