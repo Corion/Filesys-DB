@@ -241,7 +241,7 @@ get '/index.html' => sub( $c ) {
 
 post '/index.html' => sub( $c ) {
     my $search = $c->param('q');
-    my $rows = query( $search );
+    my $rows = length($search) ? query( $search ) : undef;
     $c->stash( query => $search, rows => $rows, query => $search );
     $c->render('index');
 };
