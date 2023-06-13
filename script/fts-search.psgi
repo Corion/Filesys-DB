@@ -227,12 +227,13 @@ sub collections( $id ) {
 }
 
 get '/' => sub( $c ) {
-    $c->stash( query => undef, rows => undef );
-    $c->render('index');
+    $c->redirect_to('index.html');
+    #$c->stash( query => undef, rows => undef );
+    #$c->render('index');
 };
 
 get '/index.html' => sub( $c ) {
-    my $search = $c->param('q');
+    my $search = $c->param('q') // '';
     my $rows = length($search) ? query( $search ) : undef;
     $c->stash( query => $search, rows => $rows, query => $search );
     $c->render('index');
@@ -296,7 +297,7 @@ __DATA__
 <!DOCTYPE html>
 <html>
 <body>
-...
+<a href="<%= url_for('/index.html')->query( q => $query ) %>">Back to results</a>
 <p><%= $document->{filename} %></p>
 <h1><%= $document->{title} %></h1>
 <div id="content">
