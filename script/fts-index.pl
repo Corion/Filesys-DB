@@ -93,3 +93,7 @@ for my $doc (@docs) {
 
 }
 
+# When the Thesaurus is newer than the entries, we can update all older entries
+# instead of updating all entries. But maybe this is not worth the optimization
+# since we always update the whole thesaurus? Or maybe, we don't. This would
+# allow incremental index updates!
