@@ -1,5 +1,6 @@
 package Filesys::DB::FTS::Tokenizer;
 use 5.020;
+use utf8; # does that help?
 no warnings 'experimental::signatures';
 use feature 'signatures';
 
@@ -39,7 +40,8 @@ sub get_stemmer( $language ) {
 # We convert the HTML to ['text',startpos,endpos]
 sub locale_tika_tokenizer { # see also: Search::Tokenizer
     return sub( $ctx, $string, $tokenizer_context_flags ) {
-    Encode::_utf8_on($string); # we assume we get UTF-8 from SQLite
+    #Encode::_utf8_on($string); # we assume we get UTF-8 from SQLite
+    Encode::decode('UTF-8',$string); # we assume we get UTF-8 from SQLite
 
     my $stemmer = get_stemmer( $tokenizer_language );
     #warn sprintf "%04x", $tokenizer_context_flags;
