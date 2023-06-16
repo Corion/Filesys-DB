@@ -140,9 +140,9 @@ sub extract_content_via_tika( $self, $info ) {
 
     state $tika //= do {
         my $t = eval {
-            Apache::Tika::Server->new(
-                jarfile => '/home/corion/Projekte/Apache-Tika-Async/jar/tika-server-standard-2.8.0.jar',
-            );
+			# YOu can set the environment to specify a custom Tika path
+			# or Tika jar file
+            Apache::Tika::Server->new();
         };
         eval { $t->launch; };
         ! $@ and $t
