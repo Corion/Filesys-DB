@@ -4,6 +4,7 @@ use 5.020;
 use feature 'signatures';
 no warnings 'experimental::signatures';
 
+use Encode 'decode';
 use Filesys::DB;
 use DBIx::RunSQL;
 use Getopt::Long;
@@ -12,6 +13,7 @@ use PerlX::Maybe;
 use Text::Table;
 
 use Filesys::DB::FTS::Tokenizer;
+use Filesys::DB::FTS::Thesaurus;
 
 GetOptions(
     'mountpoint|m=s' => \my $mountpoint,
@@ -76,15 +78,42 @@ sub right_ell($str,$len) {
     return $str
 }
 
-my $tmp_res = $store->selectall_named(<<'', $search);
-    SELECT html
-         , title
-         , entry_id
-         , highlight(filesystem_entry_fts5, 0, '<-mark->', '</-mark->') as snippet
-      FROM filesystem_entry_fts5
-      where html MATCH :search
-  order by rank
+my $thesaurus = Filesys::DB::FTS::Thesaurus->load('thesaurus-search.yaml');
 
+sub query( $search, $language='en' ) {
+    # XXX detect the language from the snippet? Maybe using trigrams? Or have the user select it?
+    local $Filesys::DB::FTS::Tokenizer::tokenizer_language = $language;
+    local $Filesys::DB::FTS::Tokenizer::thesaurus = $thesaurus;
+
+    my $tmp_res = $store->selectall_named(<<'', $search);
+        SELECT
+              fts.html
+            , fts.entry_id
+            , highlight(filesystem_entry_fts5, 0, '<-mark->', '</-mark->') as snippet
+            , fs.filename
+            , fs.entry_json
+        FROM filesystem_entry_fts5 fts
+        JOIN filesystem_entry fs
+          ON fs.entry_id = fts.entry_id
+        where fts.html MATCH :search
+    order by rank
+
+    for (@$tmp_res) {
+        # Strip HTML tags ?
+
+        $_->{html} = decode('UTF-8',$_->{html});
+        $_->{snippet} = decode('UTF-8',$_->{snippet});
+
+        my $r = $store->_inflate_entry( $_ );
+        $r->{snippet} = $_->{snippet};
+        $_ = $r;
+        $_->{title} = $_->{content}->{title};
+    }
+
+    return $tmp_res
+}
+
+my $tmp_res = query( $search );
 # prepare for output
 for (@$tmp_res) {
     $_->{snippet} =~ s!\A(.*?)<-mark->!left_ell($1,15)."<-mark->"!ems;
