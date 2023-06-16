@@ -7,3 +7,4 @@
 central: "ecb"
 "pound":
     - "GBP"
+gbp: pound
