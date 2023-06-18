@@ -152,7 +152,11 @@ sub extract_content_via_tika( $self, $info ) {
         my $changed;
 
         my $pdf_info = $tika->get_all( $filename );
-        my $lang = $pdf_info->meta->{'meta:language'} // 'en';
+        my $lang =    $pdf_info->meta->{'dc:language'}
+                   // $pdf_info->meta->{'meta:language'}
+                   // 'en';
+        $lang = lc $lang;
+        $lang =~ s/-\w+$//; # en-gb -> en , even though we lose a tiny bit here
         $lang = 'en' if $lang eq 'th'; # weird misdetection
 
         if( $lang =~ /^(de|en|fr|zh)$/ ) {
@@ -161,6 +165,8 @@ sub extract_content_via_tika( $self, $info ) {
             $changed += changed( \($info->{language}), $lang);
         }
         $changed += changed( \($info->{content}->{title}), $pdf_info->meta->{'dc:title'});
+        $changed += changed( \($info->{content}->{creator}), $pdf_info->meta->{'dc:creator'});
+        $changed += changed( \($info->{content}->{company}), $pdf_info->meta->{'pdf:docinfo:custom:Company'});
         $changed += changed( \($info->{content}->{html}), $pdf_info->content());
 
         return $changed;
@@ -228,11 +234,14 @@ our %file_properties = (
     'application/vnd.oasis.opendocument.presentation' => {
         '$.content.title' => \&extract_content_via_tika,
         '$.content.html'  => \&extract_content_via_tika,
+        '$.content.creator'  => \&extract_content_via_tika,
     },
     'application/pdf' => {
         # Arrayref here, so we only make a single call?!
         '$.content.title' => \&extract_content_via_tika,
         '$.content.html'  => \&extract_content_via_tika,
+        '$.content.creator'  => \&extract_content_via_tika,
+        '$.content.company'  => \&extract_content_via_tika,
     },
 );
 
