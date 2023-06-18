@@ -75,9 +75,10 @@ create table filesystem_collection (
       collection_json      varchar(65520) not null default '{}'
     , collection_id        integer primary key not null
     , collection_type      generated always as (json_extract(collection_json, '$.collection_type')) -- 'directory', 'album', ???
-    , parent_id generated always as (json_extract(collection_json, '$.parent_id'))
-    , title              generated always as (json_extract(collection_json, '$.title'))
-    , image              generated always as (json_extract(collection_json, '$.image'))
+    , parent_id            generated always as (json_extract(collection_json, '$.parent_id'))
+    , title                generated always as (json_extract(collection_json, '$.title'))
+    , image                generated always as (json_extract(collection_json, '$.image'))
+    , generator_id         generated always as (json_extract(collection_json, '$.generator_id'))
 );
 create unique index idx_filesystem_collection_collection_id on filesystem_collection (collection_id);
 create unique index idx_filesystem_collection_directory_parent_id on filesystem_collection (collection_type,parent_id);
@@ -87,6 +88,8 @@ create table filesystem_membership (
     , collection_id        generated always as (json_extract(membership_json, '$.collection_id'))
     , entry_id             generated always as (json_extract(membership_json, '$.entry_id'))
     , position             generated always as (json_extract(membership_json, '$.position'))
+    , generator_id         generated always as (json_extract(collection_json, '$.generator_id')) -- 'manual' or 'id'
+    -- this won't handle manual _ex_clusions, but good enough for the time being
 );
 create unique index idx_filesystem_membership_collection_id_entry_id on filesystem_membership (collection_id, entry_id);
 
