@@ -290,7 +290,7 @@ if( $action eq 'scan') {
 # [ ] Make the skip list configurable, and/or hide them by a special entry
 # use cases
 # - [ ] loupilot album view
-# - [ ] RSS generation?!
+# - [ ] RSS generation?! -> search
 # - [ ] Image gallery/photostream
 # [ ] Add handler for YAML and Markdown files, extracting (for example) the title
 #     Also, for anything else containing frontmatter ...
