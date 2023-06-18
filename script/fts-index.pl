@@ -97,3 +97,4 @@ for my $doc (@docs) {
 # instead of updating all entries. But maybe this is not worth the optimization
 # since we always update the whole thesaurus? Or maybe, we don't. This would
 # allow incremental index updates!
+# [ ] Add a "fts.last_indexed" column ?
