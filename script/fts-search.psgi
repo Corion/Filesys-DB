@@ -284,7 +284,7 @@ __DATA__
 @@_document.html.ep
 % use POSIX 'strftime';
 <div>
-<h3><small><%= $row->{language} %></small> <a href="/doc/<%= $row->{sha256} %>?q=<%= $query %>"><%= $row->{content}->{title} // '<no title>' %></a></h3>
+<h3><small><%= $row->{language} %></small> <a href="/doc/<%= $row->{sha256} %>?q=<%= $query %>"><%= $row->{content}->{title} // '<no title>' %></a> (<%= $row->{content}->{creator} %>)</h3>
 <small id="filename"><%= strftime '%Y-%m-%d %H:%M', localtime( $row->{mtime}) %> - <a href="/dir/<%= $row->{sha256} %>" id="link_directory"><%= $row->{filename} %></a></small>
 <div><%== $row->{snippet} // "" %></div>
 </div>
