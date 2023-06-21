@@ -379,11 +379,6 @@ sub do_scan( $self, %options ) {
                     # before scanning and creating their contents
                     my $parent = $store->find_direntry_by_filename( $context->{parent});
 
-                    #my $relation = $store->insert_or_update_relation({
-                        #parent_id => $parent->{entry_id},
-                        #child_id  => $info->{entry_id},
-                        #relation_type => 'directory',
-                    #});
                     my $collection = $store->insert_or_update_collection({
                         parent_id => $parent->{entry_id},
                         collection_type => 'directory',
