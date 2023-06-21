@@ -413,6 +413,21 @@ __DATA__
 <input name="q" type="text" value="<%= $query %>"/><button type="submit">Search</button>
 </form>
 % if( $rows ) {
+%     my $last_gen = '';
+%     if( $filters->{implied}->@*) {
+        <h3>
+%       for my $filter ($filters->{implied}->@*) {
+    <%= $filter->{filter} %>
+%       }
+        </h3>
+%     }
+%     for my $filter ($filters->{refine}->@*) {
+%         if( $last_gen ne $filter->{generator_visual}) {
+%             $last_gen = $filter->{generator_visual};
+    <h3><%= $filter->{generator_visual} %></h3>
+%          }
+    <p><a href="<%= url_with->query({ filter => join ":", $filter->{generator_id}, $filter->{filter} }) %>"><%= $filter->{filter} %></a> (<%= $filter->{count} %>)</p>
+%     }
 %     for my $row (@$rows) {
 %= include '_document', row => $row, query => $query
 %     }
