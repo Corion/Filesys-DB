@@ -103,21 +103,6 @@ sub bind_lexicals( $self, $sql, $level, $lexicals ) {
     croak "Need an SQL string or a prepared DB handle"
         unless $sql;
 
-    my $sth;
-    if( ref $sql ) {
-        $sth = $sql;
-    } else {
-        my $dbh = $self->dbh;
-        my $ok = eval {
-            $sth = $dbh->prepare_cached($sql);
-            1;
-        };
-        if( ! $ok ) {
-            croak "$@\nOffending SQL: $sql";
-        };
-    };
-    return $sth unless $lexicals;
-
     # Gather the names of the variables used in the routine calling us
     my %parameters = map {
         if( ! var_name($level, \$_)) {
@@ -131,34 +116,52 @@ sub bind_lexicals( $self, $sql, $level, $lexicals ) {
         var_name($level, \$_) => $_
     } @$lexicals;
 
+    return $self->bind_named( $sql, \%parameters );
+}
+
+sub bind_named( $self, $sql, $parameters ) {
+    my $sth;
+    if( ref $sql ) {
+        $sth = $sql;
+    } else {
+        my $dbh = $self->dbh;
+        my $ok = eval {
+            $sth = $dbh->prepare_cached($sql);
+            1;
+        };
+        if( ! $ok ) {
+            croak "$@\nOffending SQL: $sql";
+        };
+    };
+
     my $parameter_names = $sth->{ParamValues};
 
     while (my ($name,$value) = each %$parameter_names) {
         (my $perl_name) = ($name =~ m!(\w+)!);
         $perl_name = '$' . $perl_name;
-        if( ! exists $parameters{$perl_name}) {
+        if( ! exists $parameters->{$perl_name}) {
             croak "Missing bind parameter '$perl_name'";
         };
         my $type = SQL_VARCHAR;
 
         # This is a horrible API, but so is using uplevel'ed variables
-        if( my $r = ref $parameters{$perl_name}) {
+        if( my $r = ref $parameters->{$perl_name}) {
             if( $r eq 'SCALAR' ) {
                 $type = SQL_INTEGER;
                 # Clear out old variable binding:
-                my $v = $parameters{$perl_name};
-                delete $parameters{$perl_name};
-                $parameters{$perl_name} = $$v;
+                my $v = $parameters->{$perl_name};
+                delete $parameters->{$perl_name};
+                $parameters->{$perl_name} = $$v;
             } elsif( $r eq 'ARRAY' ) {
                 $type = SQL_INTEGER;
                 # Clear out old variable binding:
-                my $v = $parameters{$perl_name};
-                delete $parameters{$perl_name};
-                $parameters{$perl_name} = $v->[0];
+                my $v = $parameters->{$perl_name};
+                delete $parameters->{$perl_name};
+                $parameters->{$perl_name} = $v->[0];
                 $type = $v->[1];
             }
         }
-        $sth->bind_param($name => $parameters{$perl_name}, $type)
+        $sth->bind_param($name => $parameters->{$perl_name}, $type)
     };
 
     return $sth
