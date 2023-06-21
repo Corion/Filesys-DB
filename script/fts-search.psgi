@@ -188,6 +188,60 @@ sub query( $search, $filters ) {
     return $tmp_res
 }
 
+sub filters( $search, $filters, $rows ) {
+    local $Filesys::DB::FTS::Tokenizer::tokenizer_language = 'en';
+    local $Filesys::DB::FTS::Tokenizer::thesaurus = $thesaurus;
+
+    # XXX detect the language from the snippet? Maybe using trigrams? Or have the user select it?
+
+# XXX add filter logic here as well, so we get accurate counts etc.!
+    my $tmp_res = $store->selectall_named(<<'', $search);
+        with documents as (
+                SELECT
+                         fts.entry_id
+                FROM filesystem_entry_fts5 fts
+                where fts.html MATCH :search
+        )
+        , collections as (
+            select c.title as filter
+                 , ifnull( json_extract( c.collection_json, '$.generator_visual' ), 'Directory') as generator_visual
+                 , c.generator_id
+                 , count(*) as c
+              from filesystem_collection c
+              join filesystem_membership m on 0+m.collection_id = 0+c.collection_id
+              join documents d on 0+d.entry_id=0+m.entry_id
+              -- where c.collection_type != 'directory'
+              group by filter, generator_visual, c.generator_id
+        )
+        select collections.filter
+             , generator_visual
+             , generator_id
+             , c as "count"
+          from collections
+      order by generator_visual, c desc
+
+    for (@$tmp_res) {
+        $_->{generator_visual} = decode( 'UTF-8', $_->{generator_visual} );
+        $_->{filter} = decode( 'UTF-8', $_->{filter} );
+    }
+
+    my $res = {
+        implied => [],
+        existing => $filters,
+        refine  => [],
+    };
+
+    for (@$tmp_res) {
+        if( $_->{count} == @$rows ) {
+            push $res->{implied}->@*, $_
+        } else {
+            push $res->{refine}->@*, $_
+        }
+    }
+
+    return $res
+}
+
 # Can we do manual highlighting here?!
 # We would need to re-tokenize and highlight things ourselves?!
 sub document( $id, $search=undef ) {
