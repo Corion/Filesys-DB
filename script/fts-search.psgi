@@ -383,14 +383,13 @@ get '/dir/:id' => sub( $c ) {
     $c->render('collections');
 };
 
-# [ ] Add filters
-# [ ] Filter on language
-# [ ] Filter on author
-# [ ] Filter on collection
-# [ ] Filter on year/time
+# [ ] Add filtering from filters
+# [ ] Filter on year/time (fancy collection)
+# [ ] Remove trivial filters
 # with X MATCH Y as matches (
 #     select distinct collection_name, collection_id where matches.contains entry
 # )
+# [ ] Add RSS generation (?!)
 #
 
 app->start;
