@@ -273,13 +273,25 @@ sub document( $id, $search=undef ) {
         $res = $store->selectall_named($sql, $id);
     }
 
-
     if( $res ) {
         $res->[0]->{snippet} = decode('UTF-8', $res->[0]->{snippet});
 
         my $r = $store->_inflate_entry( $res->[0] );
         $r->{snippet} = $res->[0]->{snippet};
         $r->{snippet} =~ s!<(/?)-mark->!<${1}b>!g;
+
+        my $entry_id = 0+$r->{entry_id};
+        $r->{ collections } = $store->selectall_named(<<'', $entry_id);
+            select c.collection_id
+                 , c.collection_json
+              from filesystem_collection c
+              join filesystem_membership m using (collection_id)
+             where 0+m.entry_id = 0+:entry_id
+
+        for my $c ($r->{collections}->@*) {
+            $c = $store->_inflate_collection( $c );
+        }
+
         return $r
 
     } else {
