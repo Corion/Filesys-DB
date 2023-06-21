@@ -409,7 +409,7 @@ __DATA__
 <!DOCTYPE html>
 <html>
 <body>
-<form method="POST" action="/index.html">
+<form method="GET" action="/index.html">
 <input name="q" type="text" value="<%= $query %>"/><button type="submit">Search</button>
 </form>
 % if( $rows ) {
