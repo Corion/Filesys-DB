@@ -83,23 +83,70 @@ sub right_ell($str,$len) {
     return $str
 }
 
-sub query( $search ) {
+sub _query( $search, $filters ) {
+
+    my $sql = <<'';
+            SELECT
+                  fts.html
+                , 0+fts.entry_id as entry_id
+                , highlight(filesystem_entry_fts5, 0, '<-mark->', '</-mark->') as snippet
+                , fs.filename
+                , fs.entry_json
+            FROM filesystem_entry_fts5 fts
+            JOIN filesystem_entry fs
+            ON fs.entry_id = fts.entry_id
+            where fts.html MATCH :search
+        order by rank
+
+
+    if( ! $filters->@* ) {
+        return $store->selectall_named($sql, $search);
+
+    } else {
+
+        my %parameters;
+        my $count = 0;
+        my $filter_clause = join "\n", map { $count++; qq{ join collections c$count on (d.entry_id = c$count.entry_id and c$count.filter=:$_->[0])} } @$filters;
+        for (@$filters) {
+            # XXX how can we solve language:en , language:de ?!
+            # Need a better clause builder here
+            $parameters{ '$' . $_->[0] } = $_->[1];
+        }
+        $parameters{ '$search' } = $search;
+
+        my $filtered = <<"";
+            with documents as (
+                $sql
+            )
+        , collections as (
+            select c.title as filter
+                 , c.generator_id
+                 , m.entry_id
+              from filesystem_collection c
+              join filesystem_membership m on 0+m.collection_id = 0+c.collection_id
+              join documents d on 0+d.entry_id=0+m.entry_id
+        )
+        select
+               d.html
+             , d.entry_id
+             , d.snippet
+             , d.filename
+             , d.entry_json
+          from documents d
+          $filter_clause
+
+        my $sth = $store->bind_named($filtered, \%parameters);
+        $sth->execute();
+        return $sth->fetchall_arrayref({});
+    }
+}
+
+sub query( $search, $filters ) {
     # XXX detect the language from the snippet? Maybe using trigrams? Or have the user select it?
     local $Filesys::DB::FTS::Tokenizer::tokenizer_language = 'en';
     local $Filesys::DB::FTS::Tokenizer::thesaurus = $thesaurus;
 
-    my $tmp_res = $store->selectall_named(<<'', $search);
-        SELECT
-              fts.html
-            , fts.entry_id
-            , highlight(filesystem_entry_fts5, 0, '<-mark->', '</-mark->') as snippet
-            , fs.filename
-            , fs.entry_json
-        FROM filesystem_entry_fts5 fts
-        JOIN filesystem_entry fs
-          ON fs.entry_id = fts.entry_id
-        where fts.html MATCH :search
-    order by rank
+    my $tmp_res = _query( $search, $filters );
 
     # prepare for output
     my $context = 30;
