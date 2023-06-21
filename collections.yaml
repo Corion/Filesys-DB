@@ -1,0 +1,21 @@
+---
+# We assume that every generator partitions the filesystem_entry space
+# and an entry does not appear in two different parts.
+generator_id: creators
+visual: Creators
+query: |
+        select entry_id
+             , case
+                 when json_extract(fs.entry_json, '$.content.creator') = 'ECB' then 'European Central Bank'
+                 else json_extract(fs.entry_json, '$.content.creator')
+               end as collection_title
+          from filesystem_entry fs
+         where collection_title is not null
+---
+generator_id: languages
+visual: Languages
+query: |
+        select entry_id
+             , json_extract(fs.entry_json, '$.language') as collection_title
+          from filesystem_entry fs
+         where collection_title is not null
