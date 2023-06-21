@@ -351,19 +351,22 @@ get '/' => sub( $c ) {
     #$c->render('index');
 };
 
-get '/index.html' => sub( $c ) {
+sub search_page( $c ) {
     my $search = $c->param('q') // '';
-    my $rows = length($search) ? query( $search ) : undef;
-    $c->stash( query => $search, rows => $rows, query => $search );
-    $c->render('index');
-};
+    my $filters = $c->every_param('filter') // [];
+    if( ! ref $filters ) {
+        $filters = [$filters];
+    }
+    $filters = [map { [ split /:/, $_ ] } @$filters];
+    my $rows = length($search) ? query( $search, $filters ) : undef;
+    $filters = length($search) ? filters( $search, $filters, $rows ) : undef;
 
-post '/index.html' => sub( $c ) {
-    my $search = $c->param('q');
-    my $rows = length($search) ? query( $search ) : undef;
-    $c->stash( query => $search, rows => $rows, query => $search );
+    $c->stash( query => $search, rows => $rows, query => $search, filters => $filters );
     $c->render('index');
-};
+}
+
+get '/index.html' => \&search_page;
+post '/index.html' => \&search_page;
 
 get '/doc/:id' => sub( $c ) {
     my $search = $c->param('q');
