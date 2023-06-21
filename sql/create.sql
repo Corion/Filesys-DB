@@ -79,6 +79,7 @@ create table filesystem_collection (
     , title                generated always as (json_extract(collection_json, '$.title'))
     , image                generated always as (json_extract(collection_json, '$.image'))
     , generator_id         generated always as (json_extract(collection_json, '$.generator_id'))
+    , generator_visual     generated always as (json_extract(collection_json, '$.generator_visual'))
 );
 create unique index idx_filesystem_collection_collection_id on filesystem_collection (collection_id);
 create unique index idx_filesystem_collection_directory_parent_id on filesystem_collection (collection_type,parent_id);
@@ -88,7 +89,7 @@ create table filesystem_membership (
     , collection_id        generated always as (json_extract(membership_json, '$.collection_id'))
     , entry_id             generated always as (json_extract(membership_json, '$.entry_id'))
     , position             generated always as (json_extract(membership_json, '$.position'))
-    , generator_id         generated always as (json_extract(collection_json, '$.generator_id')) -- 'manual' or 'id'
+    , generator_id         generated always as (json_extract(membership_json, '$.generator_id')) -- 'manual' or 'id'
     -- this won't handle manual _ex_clusions, but good enough for the time being
 );
 create unique index idx_filesystem_membership_collection_id_entry_id on filesystem_membership (collection_id, entry_id);
