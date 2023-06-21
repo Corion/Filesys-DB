@@ -426,7 +426,10 @@ __DATA__
 <body>
 <a href="<%= url_for('/index.html')->query( q => $query ) %>">Back to results</a>
 <p><%= $document->{filename} %></p>
-<h1><%= $document->{title} %></h1>
+% for my $c ($document->{collections}->@*) {
+<p><%= $c->{title} %></p>
+% }
+<h1><%= $document->{content}->{title} %></h1>
 <div id="content">
 <%== $document->{snippet} %>
 </div>
