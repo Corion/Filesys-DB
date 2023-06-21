@@ -6,6 +6,7 @@ use feature 'signatures';
 
 use Lingua::Stem;
 use Lingua::Stem::Cistem;
+use Lingua::Stem::Es;
 use Text::Unidecode;
 
 use DBD::SQLite 1.71; # actually, our patched 1.71_06
@@ -23,6 +24,16 @@ sub get_stemmer( $language ) {
 
     } elsif( fc $language eq fc 'de' ) {
         return \&Lingua::Stem::Cistem::stem;
+
+    } elsif( fc $language eq fc 'es' ) {
+        return sub( @terms ) {
+            state $tmp = Lingua::Stem::Es::stem_caching({-level => 2 });
+            my $stems = Lingua::Stem::Es::stem({
+                -words => \@terms,
+                -locale => 'es',
+            });
+            return @$stems;
+        };
 
     } else {
         state $stem //= Lingua::Stem->new();
