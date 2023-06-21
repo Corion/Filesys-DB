@@ -159,11 +159,11 @@ sub extract_content_via_tika( $self, $info ) {
         $lang =~ s/-\w+$//; # en-gb -> en , even though we lose a tiny bit here
         $lang = 'en' if $lang eq 'th'; # weird misdetection
 
-        if( $lang =~ /^(de|en|fr|zh)$/ ) {
+        #if( $lang =~ /^(de|en|fr|zh)$/ ) {
             # I don't expect other languages, except for misdetections
             # Shouldn't this be ->{content}->{language} ?!
             $changed += changed( \($info->{language}), $lang);
-        }
+        #}
         $changed += changed( \($info->{content}->{title}), $pdf_info->meta->{'dc:title'});
         $changed += changed( \($info->{content}->{creator}), $pdf_info->meta->{'dc:creator'});
         $changed += changed( \($info->{content}->{company}), $pdf_info->meta->{'pdf:docinfo:custom:Company'});
