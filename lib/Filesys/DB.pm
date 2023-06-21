@@ -414,6 +414,12 @@ sub _inflate_entry( $self, $entry ) {
     return $res
 }
 
+sub _inflate_collection( $self, $collection ) {
+    my $res = decode_json( $collection->{collection_json} );
+    $res->{collection_id} = $collection->{collection_id};
+    return $res
+}
+
 sub _inflate_sth( $self, $sth ) {
     return map {
         $self->_inflate_entry( $_ );
