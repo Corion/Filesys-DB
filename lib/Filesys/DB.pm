@@ -306,8 +306,6 @@ sub to_local( $self, $mountpoint, $filename ) {
 sub insert_or_update_direntry( $self, $info ) {
     my $local_filename = $info->{filename};
 
-#use Devel::Peek;
-#Dump $info->{filename};
     (my($mountpoint), $info->{filename}) = $self->to_alias( $info->{filename});
 
     $info->{mountpoint} //= $mountpoint;
@@ -355,7 +353,11 @@ SQL
         $res = $tmp_res->[0]->{entry_id};
     };
     $info->{entry_id} = $res;
-    #$info->{filename} = $local_filename;
+
+    if( ! ref $local_filename) {
+        $local_filename = Filesys::Filename->from_native( $local_filename );
+    }
+    $info->{filename} = $local_filename;
     return $info
 }
 
