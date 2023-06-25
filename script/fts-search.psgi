@@ -400,7 +400,7 @@ __DATA__
 % use POSIX 'strftime';
 <div>
 <h3><small><%= $row->{language} %></small> <a href="/doc/<%= $row->{sha256} %>?q=<%= $query %>"><%= $row->{content}->{title} // '<no title>' %></a> (<%= $row->{content}->{creator} %>)</h3>
-<small id="filename"><%= strftime '%Y-%m-%d %H:%M', localtime( $row->{mtime}) %> - <a href="/dir/<%= $row->{sha256} %>" id="link_directory"><%= $row->{filename} %></a></small>
+<small id="filename"><%= strftime '%Y-%m-%d %H:%M', localtime( $row->{mtime}) %> - <a href="/dir/<%= $row->{sha256} %>" id="link_directory"><%= $row->{filename}->value %></a></small>
 <div><%== $row->{snippet} // "" %></div>
 </div>
 
@@ -439,7 +439,7 @@ __DATA__
 <html>
 <body>
 <a href="<%= url_for('/index.html')->query( q => $query ) %>">Back to results</a>
-<p><%= $document->{filename} %></p>
+<p><%= $document->{filename}->value %></p>
 % for my $c ($document->{collections}->@*) {
 <p><%= $c->{title} %></p>
 % }
