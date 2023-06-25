@@ -16,7 +16,7 @@ Filesys::TreeWalker - walk a directory tree breadth first, newest entries first
 =head1 SYNOPSIS
 
   use Filesys::TreeWalker 'scan_tree_bf';
-  
+
   scan_tree_bf(
       file      => sub( $name, $context ) { say "$name: size is " . $context->{stat}->[7] },
       directory => sub( $name, $context ) { 1 },
@@ -31,7 +31,8 @@ sub _collect_fs_info( $fn, $parent=undef ) {
     my $type = -f $fn ? 'file'
              : -d $fn ? 'directory'
              : undef;
-    return {
+
+    return +{
         type   => $type,
         stat   => [stat($fn)],
         parent => $parent,
@@ -89,7 +90,7 @@ A filtering subroutine that is invoked for each directory to determine whether
 it should be scanned or not.
 
 =back
-  
+
 =cut
 
 # We currently expect entries from a filesystem, not ftp/webdav/ssh yet
@@ -131,7 +132,9 @@ sub scan_tree_bf( %options ) {
             my @entries = map {
                 my $full = "$dn/$_";
 
-                _collect_fs_info( $full, $dn )
+                my $info = _collect_fs_info( $full, $dn );
+
+                $info
             } grep {
                     $_ ne '.'
                 and $_ ne '..'
@@ -145,6 +148,7 @@ sub scan_tree_bf( %options ) {
             $on_file->($entry->{name}, $entry);
 
         } else {
+            warn "$entry->{type}: <<$entry->{name}>>";
             # we skip stuff that is neither a file nor a directory
         }
     }
