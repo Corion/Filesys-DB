@@ -35,6 +35,7 @@ GetOptions(
     'dry-run|n'      => \my $dry_run,
     'all'            => \my $scan_all_mountpoints,
     'watch'          => \my $watch_all_mountpoints,
+    'force'          => \my $force,
 );
 
 my $action = $watch_all_mountpoints ? 'watch'
@@ -155,6 +156,7 @@ sub do_delete( $op, $info ) {
 sub do_scan( $op, @directories ) {
     $op->do_scan(
         directories => \@directories,
+        force => $force,
     );
 }
 
