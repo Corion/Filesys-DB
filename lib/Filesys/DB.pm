@@ -247,7 +247,9 @@ sub get_mountpoint_alias( $self, $_filename ) {
             return ($mp->{$alias}->{directory}, $alias)
         }
     };
-    croak "Don't know how/where to store '$_filename', no mountpoint found for that directory.";
+    my $vis
+        = ref $_filename ? $_filename->value : $_filename;
+    croak sprintf "Don't know how/where to store '$vis', no mountpoint found for that directory.";
 }
 
 =head2 C<< ->decode_filename $filename_octets >>
