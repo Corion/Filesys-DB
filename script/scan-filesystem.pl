@@ -11,7 +11,6 @@ use Filesys::DB;
 use Filesys::DB::Watcher;
 use Filesys::DB::Operation;
 
-use Carp 'croak';
 use Getopt::Long;
 use POSIX 'strftime';
 use Encode 'encode', 'decode';
