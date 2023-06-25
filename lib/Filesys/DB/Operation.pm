@@ -148,8 +148,7 @@ sub extract_content_via_tika( $self, $info ) {
     };
 
     if($tika) {
-        my $changed;
-
+        my $changed = 0;
         my $pdf_info = $tika->get_all( $filename );
         my $lang =    $pdf_info->meta->{'dc:language'}
                    // $pdf_info->meta->{'meta:language'}
@@ -422,6 +421,7 @@ sub do_update( $self, $info, %options ) {
         return $info;
     } else {
         $info = $self->store->insert_or_update_direntry($info);
+        return $info
     }
 };
 
