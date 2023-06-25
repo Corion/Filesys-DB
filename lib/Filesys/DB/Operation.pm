@@ -413,7 +413,7 @@ sub do_update( $self, $info, %options ) {
                   ? delete $options{ dry_run }
                   : $self->dry_run;
     if( $dry_run ) {
-        $self->msg->( "update,$info->{filename}" );
+        $self->msg->( sprintf "update,%s", $info->{filename}->value );
         return $info;
     } else {
         $info = $self->store->insert_or_update_direntry($info);
@@ -425,7 +425,7 @@ sub do_delete( $self, $info, %options ) {
                   ? delete $options{ dry_run }
                   : $self->dry_run;
     if( $dry_run ) {
-        $self->msg->( "delete,$info->{filename}" );
+        $self->msg->( sprintf "delete,%s", $info->{filename}->{value} );
         return $info;
     } else {
         $info = $self->store->delete_direntry($info);
