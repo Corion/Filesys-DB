@@ -136,7 +136,7 @@ sub changed( $r_old, $new ) {
 }
 
 sub extract_content_via_tika( $self, $info ) {
-    my $filename = $info->{filename};
+    my $filename = $info->{filename}->native;
     state $tika //= do {
         my $t = eval {
 			# YOu can set the environment to specify a custom Tika path
@@ -181,7 +181,7 @@ sub extract_content_via_audio_tag( $self, $info ) {
 
     my $changed;
 
-    my $audio_info = audio_info( $info->{filename} );
+    my $audio_info = audio_info( $info->{filename}->native );
     for( qw(title artist album track duration)) {
         if( ! defined $info->{content}->{$_}) {
             $changed += changed( \($info->{content}->{$_}), $audio_info->{$_});
@@ -197,7 +197,7 @@ our %file_properties = (
         0
     },
     '$.sha256' => sub( $self, $info ) {
-        my $file = $info->{filename};
+        my $file = $info->{filename}->native;
         if( $info->{entry_type} eq 'file' ) {
             my $digest = Digest::SHA->new(256);
             eval {
@@ -214,7 +214,7 @@ our %file_properties = (
         if( $info->{entry_type} eq 'file' ) {
 
             my @types;
-            eval { @types = $mime->mime_types($info->{filename}); };
+            eval { @types = $mime->mime_types($info->{filename}->native); };
             if( $@ ) {
                 return 0;
             };
@@ -287,11 +287,12 @@ sub update_properties( $self, $info, %options ) {
         for my $up (@updaters) {
             my( $vis, $cb ) = @$up;
             if( $dry_run ) {
-                $self->msg->( "rescan,$vis,$info->{filename}");
+                $self->msg->( sprintf "rescan,%s,%s", $vis, $info->{filename}->value);
             } else {
                 # Just so we always have a last_scanned entry:
                 $info->{last_scanned} //= timestamp;
-                $status->( $vis, $info->{filename});
+                $status->( $vis, $info->{filename}->value );
+                $self->msg->( '*** ' . $info->{filename}->value );
                 if( $cb->($self, $info)) {
                     $info->{last_scanned} = timestamp;
                     $do_scan = 1;
@@ -313,11 +314,11 @@ sub update_properties( $self, $info, %options ) {
     return $info
 }
 
-sub basic_direntry_info( $self, $ent, $context, $defaults ) {
-    my $fn = $context->{parent} . '/' . $ent; # encoding?!
+sub basic_direntry_info( $self, $ent, $fn, $context, $defaults ) {
     $context //= { stat => [stat($fn)] };
     return {
         %$defaults,
+        #filename => $ent,
         filename => $fn,
         mtime    => $context->{stat}->[9],
     }
@@ -362,11 +363,13 @@ sub do_scan( $self, %options ) {
         wanted => sub($name) { $s->keep_fs_entry($name ) },
         queue => $directories,
         file => sub($file,$context) {
+            #perl -Ilib t/04
             my $info = $store->find_direntry_by_filename( $file );
             if( ! $info) {
-                $info = $self->basic_direntry_info($file,$context, { entry_type => 'file' });
+                my $fullname = File::Spec->rel2abs($file, $context->{parent});
+                $info = $self->basic_direntry_info($file, $fullname, $context, { entry_type => 'file' });
                 $info = $self->do_update( $info );
-            };
+            }
 
             if( ! $dry_run ) {
                 $info = $self->update_properties( $info, context => $context, force => $options{ force } );
@@ -396,7 +399,9 @@ sub do_scan( $self, %options ) {
         directory => sub( $directory, $context ) {
             my $info = $store->find_direntry_by_filename( $directory );
             if( ! $info ) {
-                $info = $self->basic_direntry_info($directory,$context,{ entry_type => 'directory' });
+                my $fullname = File::Spec->rel2abs($directory, $context->{parent});
+                $info = $self->basic_direntry_info($directory, $fullname, $context,{ entry_type => 'directory' });
+                warn $info->{filename};
                 $info = $self->do_update(
                     $info,
                 );
