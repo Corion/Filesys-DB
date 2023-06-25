@@ -137,7 +137,6 @@ sub changed( $r_old, $new ) {
 
 sub extract_content_via_tika( $self, $info ) {
     my $filename = $info->{filename};
-
     state $tika //= do {
         my $t = eval {
 			# YOu can set the environment to specify a custom Tika path
@@ -315,10 +314,11 @@ sub update_properties( $self, $info, %options ) {
 }
 
 sub basic_direntry_info( $self, $ent, $context, $defaults ) {
-    $context //= { stat => [stat($ent)] };
+    my $fn = $context->{parent} . '/' . $ent; # encoding?!
+    $context //= { stat => [stat($fn)] };
     return {
         %$defaults,
-        filename => $ent,
+        filename => $fn,
         mtime    => $context->{stat}->[9],
     }
 }
