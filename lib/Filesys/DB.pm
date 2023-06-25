@@ -11,7 +11,7 @@ use DBD::SQLite;
 use PadWalker 'var_name'; # for scope magic...
 use DBIx::RunSQL;
 use Encode 'encode', 'decode', '_utf8_off';
-use JSON 'encode_json', 'decode_json';
+use JSON;
 use YAML 'LoadFile';
 
 use Carp 'croak';
@@ -32,6 +32,12 @@ has 'mountpoints' => (
     default => sub { {} },
 );
 
+has 'json' => (
+    is => 'ro',
+    default => sub { JSON->new->convert_blessed },
+);
+
+# XXX this should be better/smarter, some day
 around BUILDARGS => sub ($orig, $class, @args) {
     my $args = @args == 1 && ref $args[0] ? $args[0] : { @args };
     # This should potentially also come from the config?!
@@ -264,7 +270,7 @@ sub insert_or_update_direntry( $self, $info ) {
     # Clean out all values that should not be stored:
     # delete @{$info}{ (grep { /^_temp/ } keys %$info) };
 
-    my $value = encode_json( $info );
+    my $value = $self->json->encode( $info );
 
     my $res;
     if( defined $info->{entry_id}) {
@@ -410,8 +416,7 @@ sub _inflate_filename( $self, $mountpoint, $filename ) {
 }
 
 sub _inflate_entry( $self, $entry ) {
-    # Downgrade the string again:
-    my $res = decode_json( $entry->{entry_json} );
+    my $res = $self->json->decode( $entry->{entry_json} );
     $res->{filename} = $self->_inflate_filename( $res->{mountpoint}, $res->{filename});
     $res->{entry_id} = $entry->{entry_id};
     return $res
