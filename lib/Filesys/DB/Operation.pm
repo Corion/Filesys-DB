@@ -291,7 +291,6 @@ sub update_properties( $self, $info, %options ) {
                 # Just so we always have a last_scanned entry:
                 $info->{last_scanned} //= timestamp;
                 $status->( $vis, $info->{filename}->value );
-                $self->msg->( '*** ' . $info->{filename}->value );
                 if( $cb->($self, $info)) {
                     $info->{last_scanned} = timestamp;
                     $do_scan = 1;
@@ -331,14 +330,14 @@ sub keep_fs_entry( $self, $name ) {
     if( $name =~ m![/\\](?:(?:\.(git|cvs|config|DS_Store|~lock\.))|__MACOSX|Thumbs.db)\z!i
         # certain file extensions
         or $name =~ m!(?:\.tmp|\.part)\z! ) {
-        # msg("Skipping '$name'");
+        #$self->msg->("Skipping '$name'");
         return undef
     }
 
     my ($mp,$fn) = $store->to_alias( $name );
     my $skip = $store->mountpoints->{$mp};
     if( grep { index( $_, $name ) == 0 } @{ $skip->{'skip-index'} || []}) {
-        # msg("Skipping '$name'");
+        #$self->msg->("Skipping '$name'");
         return undef
     }
 
@@ -400,7 +399,6 @@ sub do_scan( $self, %options ) {
             if( ! $info ) {
                 my $fullname = File::Spec->rel2abs($directory, $context->{parent});
                 $info = $self->basic_direntry_info($directory, $fullname, $context,{ entry_type => 'directory' });
-                warn $info->{filename};
                 $info = $self->do_update(
                     $info,
                 );
