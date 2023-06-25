@@ -170,7 +170,7 @@ sub do_rescan( $op, @sql ) {
         file => sub( $info, $context ) {
             # do a liveness check? and potentially delete the file entry
             # also, have a dry-run option, just listing the files out of date?!
-            if( ! -e $info->{filename}) {
+            if( ! -e $info->{filename}->native) {
 
                 my $parents = $store->find_memberships_by_type_child( 'directory', $info->{entry_id} );
                 # we don't use this information yet
@@ -191,12 +191,11 @@ sub do_rescan( $op, @sql ) {
                     # basic context
                     $context = Filesys::TreeWalker::_collect_fs_info( $info->{filename} );
                 };
-
                 $info = $op->update_properties( $info, force => 1, context => $context );
             }
         },
         directory => sub( $info, $context ) {
-            if( ! -e $info->{filename}) {
+            if( ! -e $info->{filename}->native) {
                 do_delete($op, { filename => $info->{filename}});
             };
             return 1
