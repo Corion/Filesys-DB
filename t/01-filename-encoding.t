@@ -23,7 +23,10 @@ my $store = Filesys::DB->new(
 my $filename_octets = "y/\x{ef}\x{bb}\x{bf}House Gospel Choir";
 
 my $stored = $store->insert_or_update_direntry({ filename => $filename_octets });
-ok !is_utf8( $stored->{filename}), "The stored filename is raw bytes";
+if(! ok is_utf8( $stored->{filename}->value), "The stored filename is Unicode" ) {
+    # Well, maybe it just was not Unicode but ASCII ...
+    diag $stored->{filename}->value;
+}
 my $id = $stored->{entry_id};
 
 # my $sth = $dbh->prepare('select * from filesystem_entry');
@@ -33,10 +36,9 @@ my $id = $stored->{entry_id};
 my $info = $store->find_direntry_by_filename($filename_octets);
 ok $info, "We can find an existing filename with UTF-8 in its parts";
 
-ok !is_utf8( $info->{filename}), "The returned filename is raw bytes";
+ok is_utf8( $info->{filename}->value), "The returned filename is Unicode";
 
-is $info->{filename}, $filename_octets, "We get the same filename octets back";
-
+is $info->{filename}->value, $store->decode_filename($filename_octets)->value, "We get a Unicode filename back";
 
 my $reinserted = $store->insert_or_update_direntry({ filename => $info->{filename} })->{entry_id};
 if(! is $reinserted, $id, "We detect duplicates even when decoding from the filename") {

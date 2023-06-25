@@ -17,6 +17,7 @@ use YAML 'LoadFile';
 use Carp 'croak';
 
 with 'MooX::Role::DBIConnection';
+use Filesys::Filename;
 
 our $VERSION = '0.01';
 
@@ -38,6 +39,8 @@ has 'json' => (
 );
 
 # XXX this should be better/smarter, some day
+our $default_encoding = $^O eq 'MSWin32' ? 'Latin-1' : 'UTF-8';
+
 around BUILDARGS => sub ($orig, $class, @args) {
     my $args = @args == 1 && ref $args[0] ? $args[0] : { @args };
     # This should potentially also come from the config?!
@@ -59,10 +62,19 @@ around BUILDARGS => sub ($orig, $class, @args) {
 sub _restructure_mountpoints( $self, $mountpoints ) {
     for my $mp (keys %{ $mountpoints}) {
         if( ! ref $mountpoints->{$mp} ) {
-            $mountpoints->{$mp} = +{ directory => $mountpoints->{$mp} };
+            $mountpoints->{$mp} = +{
+                directory => Filesys::Filename->from_native( $mountpoints->{$mp} ),
+                encoding  => $default_encoding,
+            };
         };
         # Backfill the alias into the structure
+        if( ! ref $mountpoints->{$mp}->{directory} ) {
+            $mountpoints->{$mp}->{directory} = Filesys::Filename->from_native(
+                $mountpoints->{$mp}->{directory}, $mountpoints->{$mp}->{encoding},
+            );
+        }
         $mountpoints->{$mp}->{alias} //= $mp;
+        $mountpoints->{$mp}->{encoding} //= $default_encoding;
         # XXX create the filesystem encoding, or guess it from somewhere
     }
     return
@@ -87,7 +99,11 @@ sub init_config( $self, %options ) {
         my $alias = $options{ mount_alias } // '${MOUNT}';
         $user_config = {
             mountpoints =>
-                {  $alias => { alias => $alias, directory => $options{ mountpoint } //  $ARGV[0], },
+                {  $alias => {
+                      alias => $alias,
+                      directory => Filesys::Filename->from_native( $options{ mountpoint } //  $ARGV[0] ),
+                      encoding => $default_encoding,
+                   },
                 }
         }
     } elsif ( -f $options{ config_file }) {
@@ -213,49 +229,90 @@ sub selectall_named {
     );
 }
 
-sub get_mountpoint_alias( $self, $filename ) {
-    my $longest;
-    $filename =~ s!\\!/!g;
+sub get_mountpoint_alias( $self, $_filename ) {
     my $mp = $self->mountpoints;
-    for my $alias (sort {    length $mp->{$b}->{directory} <=> length $mp->{$a}->{directory}
+    for my $alias (sort {    length $mp->{$b}->{directory}->value <=> length $mp->{$a}->{directory}->value
                           || $a cmp $b # do we really want to compare the names here?!
                         } keys %$mp) {
-        if( index( $filename, $mp->{$alias}->{directory} ) == 0 ) {
+        my $filename;
+        if( ! ref $_filename ) {
+            $filename = Filesys::Filename->from_native( $_filename, $mp->{$alias}->{encoding} );
+        } else {
+            $filename = $_filename;
+        }
+        my $fn = $filename->value;
+        $fn =~ s!\\!/!g;
+
+        if( index( $fn, $mp->{$alias}->{directory}->value ) == 0 ) {
             return ($mp->{$alias}->{directory}, $alias)
         }
     };
-    croak "Don't know how/where to store '$filename', no mountpoint found for that directory.";
+    croak "Don't know how/where to store '$_filename', no mountpoint found for that directory.";
+}
+
+=head2 C<< ->decode_filename $filename_octets >>
+
+  my $filename = $store->decode_filename( $octets );
+
+Decodes a filename in the file-system local encoding to Unicode.
+
+=cut
+
+sub decode_filename( $self, $filename ) {
+    if( ! ref $filename ) {
+        my ($mp,$alias) = $self->get_mountpoint_alias( $filename );
+        $filename = Filesys::Filename->from_native(
+            $filename,
+            $self->mountpoints->{$alias}->{encoding}
+        );
+    }
+    return $filename
 }
 
 sub to_alias( $self, $filename ) {
     my ($mp,$alias) = $self->get_mountpoint_alias( $filename );
-    #$filename =~ s!^\Q$mp\E[\\/]!!
-    #    or die "Could't strip mountpoint prefix '$mp' from $filename";
-    substr($filename, 0, length($mp)+1) = '';
+
+    $filename = $self->decode_filename( $filename );
+
+    substr($filename->{value}, 0, length($mp->value)+1) = '';
+
     return ($alias,$filename)
 }
 
+=head2 C<< ->to_local >>
+
+  my $f = $store->to_local( 'documents', $filename );
+  say sprintf "%s is %d bytes", $filename, -s $f;
+
+Return a local filename, as octets. You can perform
+file operations on the result string.
+
+=cut
+
 sub to_local( $self, $mountpoint, $filename ) {
-    my $mp = $self->mountpoints;
-    if( ! exists $self->mountpoints->{ $mountpoint }) {
+    my $mp = $self->mountpoints->{ $mountpoint };
+    if( !$mp ) {
         croak "Unknown mountpoint '$mountpoint'";
     }
 
-    # XXX make this FS dependent, don't blindly use '/'
-    # XXX Also, don't assume that mountpoints are in UTF-8 (but that's what YAML gives us)
-    return encode('UTF-8', $self->mountpoints->{ $mountpoint }->{directory}) . '/' . $filename;
+    $filename = $self->decode_filename( $filename );
+
+    return $mp->{directory}->native . '/' . $filename->native;
 }
 
 # here, we take the path or entry_id as primary key:
 sub insert_or_update_direntry( $self, $info ) {
     my $local_filename = $info->{filename};
+
+#use Devel::Peek;
+#Dump $info->{filename};
     (my($mountpoint), $info->{filename}) = $self->to_alias( $info->{filename});
 
     $info->{mountpoint} //= $mountpoint;
 
     # Sanity check - we don't want to store anything looking like an
     # absolute filename
-    if( $local_filename eq $info->{filename}) {
+    if( $local_filename eq $info->{filename}->value) {
         if( $mountpoint ) {
             croak "Can't store absolute filename '$local_filename', didn't remove the mountpoint '$mountpoint' " . $self->mountpoints->{$mountpoint}->{directory};
         } else {
@@ -296,7 +353,7 @@ SQL
         $res = $tmp_res->[0]->{entry_id};
     };
     $info->{entry_id} = $res;
-    $info->{filename} = $local_filename;
+    #$info->{filename} = $local_filename;
     return $info
 }
 
@@ -408,11 +465,12 @@ SQL
 }
 
 sub _inflate_filename( $self, $mountpoint, $filename ) {
-    _utf8_off($filename); # a filename is octets, not UTF-8
-    $filename = decode( 'UTF-8',   $filename); # really?!
-    $filename = encode( 'Latin-1', $filename); # really?! Convert back to "octets"
-    _utf8_off($filename); # a filename is octets, not UTF-8
-    return $self->to_local($mountpoint, $filename);
+    my $mp = $self->mountpoints->{$mountpoint};
+    # Why do we need this? JSON->decode does not return UTF-8 strings?!
+    $filename = decode( 'UTF-8', $filename );
+
+    $filename = join "/", $mp->{directory}->value, $filename;
+    return Filesys::Filename->new( value => $filename, encoding => $mp->{encoding} )
 }
 
 sub _inflate_entry( $self, $entry ) {
@@ -436,17 +494,18 @@ sub _inflate_sth( $self, $sth ) {
 
 # here, we take the path as primary key:
 sub find_direntry_by_filename( $self, $filename ) {
+    if( ! ref $filename ) {
+        $filename = $self->decode_filename( $filename );
+    }
+
     (my($mountpoint), $filename) = $self->to_alias($filename);
 
-    # All filenames will be UTF-8 encoded, as they live in a JSON blob,
-    # no matter their original encoding:
-    $filename = encode('UTF-8', $filename );
-
-    my $res = $self->selectall_named(<<'SQL', $filename, $mountpoint);
+    my $fn = $filename->value;
+    my $res = $self->selectall_named(<<'SQL', $fn, $mountpoint);
         select entry_json
              , entry_id
           from filesystem_entry
-        where filename = :filename
+        where filename = :fn
           and mountpoint = :mountpoint
 SQL
 
