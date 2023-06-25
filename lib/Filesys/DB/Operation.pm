@@ -139,17 +139,33 @@ sub extract_content_via_tika( $self, $info ) {
     my $filename = $info->{filename}->native;
     state $tika //= do {
         my $t = eval {
+
+            my $file = Apache::Tika::Async->best_jar_file(
+                glob '../Apache-Tika-Async/jar/*.jar'
+            );
+            $file = File::Spec->rel2abs($file, '.');
+
 			# YOu can set the environment to specify a custom Tika path
 			# or Tika jar file
-            Apache::Tika::Server->new();
+            Apache::Tika::Server->new(
+                jarfile => $file,
+            );
         };
         eval { $t->launch; };
+        $self->msg->( $@ ) if $@;
+        sleep 5;
         ! $@ and $t
     };
 
     if($tika) {
         my $changed = 0;
-        my $pdf_info = $tika->get_all( $filename );
+        my $pdf_info = eval { $tika->get_all( $filename ); };
+
+        if( my $err = $@ ) {
+            $tika = 0;
+            return;
+        };
+
         my $lang =    $pdf_info->meta->{'dc:language'}
                    // $pdf_info->meta->{'meta:language'}
                    // 'en';
@@ -362,6 +378,7 @@ sub do_scan( $self, %options ) {
         queue => $directories,
         file => sub($file,$context) {
             #perl -Ilib t/04
+
             my $info = $store->find_direntry_by_filename( $file );
             if( ! $info) {
                 my $fullname = File::Spec->rel2abs($file, $context->{parent});
@@ -383,7 +400,7 @@ sub do_scan( $self, %options ) {
                     my $collection = $store->insert_or_update_collection({
                         parent_id => $parent->{entry_id},
                         collection_type => 'directory',
-                        title => $parent->{title} // basename($parent->{filename}),
+                        title => $parent->{title} // basename($parent->{filename}->value),
                     });
                     my $membership = $store->insert_or_update_membership({
                         collection_id => $collection->{collection_id},
