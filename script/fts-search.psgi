@@ -15,6 +15,8 @@ use Text::Table;
 use Filesys::DB::FTS::Tokenizer;
 use Filesys::DB::FTS::Thesaurus;
 
+use URL::FilterSet;
+
 #GetOptions(
 #    'mountpoint|m=s' => \my $mountpoint,
 #    'alias|a=s' => \my $mount_alias,
@@ -83,7 +85,32 @@ sub right_ell($str,$len) {
     return $str
 }
 
-sub _query( $search, $filters ) {
+sub _collection_filter( $parameters, $filterset ) {
+
+    my $count = 0;
+    my $pcount = 0;
+    my $filters = { $filterset->as_sql };
+    my $filter_clause = join "\n",
+        map { $count++;
+              my $k = $_;
+              my $pcount = 0;
+
+              my $placeholders = join ", ",
+                                 map {
+                                   my $name = "c${count}_${pcount}";
+                                   $parameters->{ '$' . $name } = $_;
+                                   ":$name"
+                                 } $filters->{$k}->@*;
+              # XXX we trust the filter names and values here!
+              # we need to filter on the allowed names and values!
+              $parameters->{'$generator_id_' . $count} = $k;
+              qq{ JOIN collections c$count on (0+d.entry_id = 0+c$count.entry_id and c$count.generator_id = :generator_id_$count and c$count.filter IN ($placeholders))}
+        } sort keys $filters->%*;
+
+    return $filter_clause;
+}
+
+sub _query( $search, $filterset ) {
 
     my $sql = <<'';
             SELECT
@@ -99,25 +126,19 @@ sub _query( $search, $filters ) {
         order by rank
 
 
-    if( ! $filters->@* ) {
+    if( ! $filterset->has_filters ) {
         return $store->selectall_named($sql, $search);
 
     } else {
 
         my %parameters;
-        my $count = 0;
-        my $filter_clause = join "\n", map { $count++; qq{ join collections c$count on (d.entry_id = c$count.entry_id and c$count.filter=:$_->[0])} } @$filters;
-        for (@$filters) {
-            # XXX how can we solve language:en , language:de ?!
-            # Need a better clause builder here
-            $parameters{ '$' . $_->[0] } = $_->[1];
-        }
+        my $filter_clause = _collection_filter( \%parameters, $filterset );
         $parameters{ '$search' } = $search;
 
         my $filtered = <<"";
-            with documents as (
+        with documents as (
                 $sql
-            )
+        )
         , collections as (
             select c.title as filter
                  , c.generator_id
@@ -153,11 +174,11 @@ sub query( $search, $filters ) {
     for (@$tmp_res) {
         # Strip HTML tags ?
 
-        $_->{html} = decode('UTF-8',$_->{html});
-        $_->{title} = decode('UTF-8',$_->{title});
         $_->{snippet} = decode('UTF-8',$_->{snippet});
 
         my $r = $store->_inflate_entry( $_ );
+        $r->{content}->{title} = decode('UTF-8', $r->{content}->{title});
+        $r->{content}->{html} = decode('UTF-8', $r->{content}->{html});
         $r->{snippet} = $_->{snippet};
         $_ = $r;
 
@@ -194,9 +215,12 @@ sub filters( $search, $filters, $rows ) {
 
     # XXX detect the language from the snippet? Maybe using trigrams? Or have the user select it?
 
-# XXX add filter logic here as well, so we get accurate counts etc.!
-    my $tmp_res = $store->selectall_named(<<'', $search);
-        with documents as (
+    my %parameters = ( '$search' => $search );
+    my $filter_clause = _collection_filter(\%parameters, $filters );
+
+    my $sql = <<"";
+        -- we should have the FTS last, not first
+        with matching_documents as (
                 SELECT
                          fts.entry_id
                 FROM filesystem_entry_fts5 fts
@@ -204,21 +228,40 @@ sub filters( $search, $filters, $rows ) {
         )
         , collections as (
             select c.title as filter
-                 , ifnull( json_extract( c.collection_json, '$.generator_visual' ), 'Directory') as generator_visual
+                 , c.generator_id
+                 , m.entry_id
+              from filesystem_collection c
+              join filesystem_membership m on 0+m.collection_id = 0+c.collection_id
+              join matching_documents d on 0+d.entry_id=0+m.entry_id
+        )
+        , filtered as (
+        select
+               d.entry_id
+          from matching_documents d
+          $filter_clause
+        )
+        , more_collections as (
+            select c.title as filter
+                 , ifnull( json_extract( c.collection_json, '\$.generator_visual' ), 'Directory') as generator_visual
                  , c.generator_id
                  , count(*) as c
               from filesystem_collection c
               join filesystem_membership m on 0+m.collection_id = 0+c.collection_id
-              join documents d on 0+d.entry_id=0+m.entry_id
-              -- where c.collection_type != 'directory'
+              join filtered d on 0+d.entry_id=0+m.entry_id
               group by filter, generator_visual, c.generator_id
         )
-        select collections.filter
+        select more_collections.filter
              , generator_visual
              , generator_id
              , c as "count"
-          from collections
+          from more_collections
       order by generator_visual, c desc
+
+    my $sth = $store->bind_named($sql, \%parameters);
+    $sth->execute();
+    my $tmp_res = $sth->fetchall_arrayref({});
+
+use Data::Dumper; warn Dumper $tmp_res;
 
     for (@$tmp_res) {
         $_->{generator_visual} = decode( 'UTF-8', $_->{generator_visual} );
@@ -233,8 +276,10 @@ sub filters( $search, $filters, $rows ) {
 
     for (@$tmp_res) {
         if( $_->{count} == @$rows ) {
+            warn "'$_' is implied ( $_->{count} )";
             push $res->{implied}->@*, $_
         } else {
+            warn "'$_' refines ( $_->{count} )";
             push $res->{refine}->@*, $_
         }
     }
@@ -265,7 +310,8 @@ sub document( $id, $search=undef ) {
     } else {
        my $sql = <<"";
         SELECT
-              fs.*
+              fs.entry_json
+            , fs.entry_id
             , fs.html as snippet
           FROM filesystem_entry fs
          WHERE fs.sha256 = :id
@@ -277,6 +323,10 @@ sub document( $id, $search=undef ) {
         $res->[0]->{snippet} = decode('UTF-8', $res->[0]->{snippet});
 
         my $r = $store->_inflate_entry( $res->[0] );
+
+        # wtf? JSON stuff encodes octets as chars?!
+        $r->{content}->{title} = decode('UTF-8', $r->{content}->{title});
+
         $r->{snippet} = $res->[0]->{snippet};
         $r->{snippet} =~ s!<(/?)-mark->!<${1}b>!g;
 
@@ -353,15 +403,19 @@ get '/' => sub( $c ) {
 
 sub search_page( $c ) {
     my $search = $c->param('q') // '';
-    my $filters = $c->every_param('filter') // [];
-    if( ! ref $filters ) {
-        $filters = [$filters];
-    }
-    $filters = [map { [ split /:/, $_ ] } @$filters];
-    my $rows = length($search) ? query( $search, $filters ) : undef;
-    $filters = length($search) ? filters( $search, $filters, $rows ) : undef;
+    my $filter_param = $c->param('filter') // '';
 
-    $c->stash( query => $search, rows => $rows, query => $search, filters => $filters );
+    my $filterset = URL::FilterSet->from_query( $filter_param );
+    my $rows = length($search) ? query( $search, $filterset ) : undef;
+    my $filters = length($search) ? filters( $search, $filterset, $rows ) : undef;
+
+    $c->stash(
+        query => $search,
+        rows => $rows,
+        query => $search,
+        filters => $filters,
+        filterset => $filterset,
+    );
     $c->render('index');
 }
 
@@ -383,9 +437,12 @@ get '/dir/:id' => sub( $c ) {
     $c->render('collections');
 };
 
+# [ ] Add combining filters (better handler than url->with_query()
+#     - maybe pregenerate the filter queries completely?
+#     - we can simply append the next filter parameter?!
 # [ ] Add filtering from filters
 # [ ] Filter on year/time (fancy collection)
-# [ ] Remove trivial filters
+# [ ] Remove trivial filters ("implied")
 # with X MATCH Y as matches (
 #     select distinct collection_name, collection_id where matches.contains entry
 # )
@@ -425,7 +482,8 @@ __DATA__
 %             $last_gen = $filter->{generator_visual};
     <h3><%= $filter->{generator_visual} %></h3>
 %          }
-    <p><a href="<%= url_with->query({ filter => join ":", $filter->{generator_id}, $filter->{filter} }) %>"><%= $filter->{filter} %></a> (<%= $filter->{count} %>)</p>
+%          my $param = url_with->query({ filter => $filterset->as_query( $filter->{generator_id}, $filter->{filter}) });
+    <p><a href="<%= $param %>"><%= $filter->{filter} %></a> (<%= $filter->{count} %>)</p>
 %     }
 %     for my $row (@$rows) {
 %= include '_document', row => $row, query => $query
