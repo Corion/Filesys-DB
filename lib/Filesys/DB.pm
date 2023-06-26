@@ -260,9 +260,14 @@ Decodes a filename in the file-system local encoding to Unicode.
 
 =cut
 
-sub decode_filename( $self, $filename ) {
+sub decode_filename( $self, $filename, $mountpoint = undef ) {
     if( ! ref $filename ) {
-        my ($mp,$alias) = $self->get_mountpoint_alias( $filename );
+        my ($mp,$alias);
+        if( ! $mountpoint ) {
+            ($mp,$alias) = $self->get_mountpoint_alias( $filename );
+        } else {
+            $alias = $mountpoint;
+        }
         $filename = Filesys::Filename->from_native(
             $filename,
             $self->mountpoints->{$alias}->{encoding}
@@ -297,7 +302,7 @@ sub to_local( $self, $mountpoint, $filename ) {
         croak "Unknown mountpoint '$mountpoint'";
     }
 
-    $filename = $self->decode_filename( $filename );
+    $filename = $self->decode_filename( $filename, $mountpoint );
 
     return $mp->{directory}->native . '/' . $filename->native;
 }
