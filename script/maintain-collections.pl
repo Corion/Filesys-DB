@@ -35,6 +35,7 @@ GetOptions(
     'rescan|r'       => \my $rescan,
     'dry-run|n'      => \my $dry_run,
     'collections=s'  => \my $collections,
+    'wipe'           => \my $wipe,
 );
 
 $dsn //= 'dbi:SQLite:dbname=db/filesys-db.sqlite';
@@ -52,6 +53,10 @@ $store->init_config(
 
 if( $mount_alias and $mountpoint ) {
     $store->mountpoints->{ $mount_alias } = +{ directory => $mountpoint, alias => $mount_alias };
+}
+
+if( $wipe ) {
+    # Should we also delete human-touched stuff here?!
 }
 
 my @generators = LoadFile($collections);
