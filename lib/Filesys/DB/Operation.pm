@@ -223,6 +223,7 @@ sub extract_content_from_markdown( $self, $info ) {
     my $changed = 0;
     $changed += changed( \($info->{content}->{title}),   $frontmatter->{'title'});
     $changed += changed( \($info->{content}->{creator}), $frontmatter->{'author'});
+    $changed += changed( \($info->{language}), $frontmatter->{'language'});
     $changed += changed( \($info->{content}->{html}),    $tfm->data_text());
 
     return $changed
