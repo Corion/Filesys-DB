@@ -80,6 +80,7 @@ my %module = (
         'MIME::Detect'         => 0,
         'Music::Tag'           => 0,
         'Apache::Tika::Server' => 0,
+        'Text::FrontMatter::YAML' => 0,
 
         'File::ChangeNotify'   => 0,
 

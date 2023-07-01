@@ -20,6 +20,8 @@ use lib '../Apache-Tika-Async/lib';
 use Apache::Tika::Server;
 use POSIX 'strftime';
 
+use Text::FrontMatter::YAML;
+
 has 'store' => (
     is => 'ro',
 );
@@ -205,6 +207,25 @@ sub extract_content_via_audio_tag( $self, $info ) {
     return $changed;
 }
 
+sub extract_content_from_markdown( $self, $info ) {
+    open my $fh, '<:raw', $info->{filename}->native
+        or return;
+    my $content = do {
+        local (@ARGV, $/) = $info->{filename}->native;
+        <>
+    };
+    my $tfm = Text::FrontMatter::YAML->new(
+        document_string => $content
+    );
+    my $frontmatter = $tfm->frontmatter_hashref;
+    my $changed = 0;
+    $changed += changed( \($info->{content}->{title}),   $frontmatter->{'title'});
+    $changed += changed( \($info->{content}->{creator}), $frontmatter->{'creator'});
+    $changed += changed( \($info->{content}->{html}),    $tfm->data_text());
+
+    return $changed
+}
+
 our %file_properties = (
     # '$.content.text' ?
     '$.mountpoint' => sub( $self, $info ) {
@@ -257,6 +278,11 @@ our %file_properties = (
         '$.content.creator'  => \&extract_content_via_tika,
         '$.content.company'  => \&extract_content_via_tika,
     },
+    'text/plain' => { # we assume it's markdown ...
+        '$.content.title' => \&extract_content_from_markdown,
+        '$.content.html'  => \&extract_content_from_markdown,
+        '$.content.creator'  => \&extract_content_from_markdown,
+     },
 );
 
 sub update_properties( $self, $info, %options ) {
@@ -319,8 +345,7 @@ sub update_properties( $self, $info, %options ) {
 
     # If we changed anything, update the database:
     if( ! $last_ts or ($info->{last_scanned} // '' ) ne $last_ts ) {
-        #msg( sprintf "% 8s | %s", 'update', $file);
-        # $self->msg->( "update,$info->{filename} ( $info->{last_scanned} <=> $last_ts )");
+        #msg( sprintf "% 8s | %s", 'update', $info->{filename}->value);
         local $Filesys::DB::FTS::Tokenizer::tokenizer_language = $info->{language};
 
         $info = $self->do_update($info);
