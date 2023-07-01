@@ -12,6 +12,7 @@ use Carp 'croak';
 use Filesys::TreeWalker 'scan_tree_bf';
 
 # For the content scanner
+use JSON::Path;
 use Digest::SHA;
 use MIME::Detect;
 use Music::Tag 'traditional' => 1;
@@ -323,7 +324,6 @@ sub update_properties( $self, $info, %options ) {
     while( $do_scan ) {
         $do_scan = 0;
         my @updaters = _applicable_properties( \%file_properties, $info, \%options );
-
         my $status = $self->status;
         for my $up (@updaters) {
             my( $vis, $cb ) = @$up;
