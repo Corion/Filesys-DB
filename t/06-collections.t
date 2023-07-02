@@ -39,11 +39,7 @@ my $op = Filesys::DB::Operation->new(
     },
 );
 
-# Create some test temp files
-# take a PDF file from the corpus - we should have something better,
-# especially, we don't want PDFs as they are slow to read. Maybe we want to
-# simply index markdown files?!!
-for my $file (glob "$base/corpus/*.markdown") {
+sub add_file( $file ) {
     $file = File::Spec->rel2abs($file);
     my $context = Filesys::TreeWalker::_collect_fs_info( $file );
     my $info = {
@@ -51,6 +47,12 @@ for my $file (glob "$base/corpus/*.markdown") {
         filename => Filesys::Filename->from_native( $context->{name} ),
     };
     $info = $op->update_properties( $info, force => 1, context => $context );
+}
+
+my @files = sort glob "$base/corpus/*.markdown";
+my $new_file = pop @files;
+for my $file (@files) {
+    add_file( $file );
 };
 
 note "Generating collections";
@@ -112,7 +114,6 @@ is $collections_sizes, $expected, "A first round creates the expected collection
 # Recreate the collections
 # Check that we still have the same number of memberships
 
-# maintain collections
 for my $gen (@generators) {
     $op->maintain_collections(
         generator_id => $gen->{generator_id},
@@ -123,6 +124,38 @@ for my $gen (@generators) {
 is $collections_sizes, $expected, "Collection maintenance is idempotent";
 
 # add an item to the documents and regenerate the collections, see them expand
+add_file( $new_file );
+for my $gen (@generators) {
+    $op->maintain_collections(
+        generator_id => $gen->{generator_id},
+        query        => $gen->{query},
+        visual       => $gen->{visual},
+    );
+}
+
+$collections_sizes = $store->selectall_named(<<'SQL');
+    select
+           c.title
+         , c.generator_id
+         , count(*) as "count"
+      from filesystem_collection c
+      join filesystem_membership m using (collection_id)
+  group by c.title, c.collection_id, c.generator_id
+  order by c.collection_id
+SQL
+
+note "Launching filter tests";
+
+$expected = [
+    { title => 'Corion',   count => 2, generator_id => 'creators' },
+    { title => 'A.U.Thor', count => 2, generator_id => 'creators' },
+    { title => 'en',       count => 4, generator_id => 'languages' },
+    { title => 'de',       count => 1, generator_id => 'languages' },
+];
+
+is $collections_sizes, $expected, "Adding a file creates the expected collections";
+
+
 # remove an item from the documents and regenerate the collections (?!)
 
 done_testing();
