@@ -122,9 +122,7 @@ for my $gen (@generators) {
 }
 is $collections_sizes, $expected, "Collection maintenance is idempotent";
 
+# add an item to the documents and regenerate the collections, see them expand
 # remove an item from the documents and regenerate the collections (?!)
-
-# check that the PDF file has PDF-like properties
-# at least when we have Tika installed
 
 done_testing();
