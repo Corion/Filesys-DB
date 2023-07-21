@@ -532,7 +532,7 @@ sub maintain_collections( $self, %options ) {
 
             if( ! $exists->@* ) {
                 # create the collection
-                say sprintf "%s: Creating '%s'", $generator_id, $collection_title;
+                $self->msg->(sprintf "%s: Creating '%s'", $generator_id, $collection_title);
                 $collections{ $collection_title } = $store->insert_or_update_collection({
                     generator_id => $generator_id,
                     title => $collection_title,
@@ -542,7 +542,7 @@ sub maintain_collections( $self, %options ) {
                 });
 
             } else {
-                say sprintf "%s: Have '%s'", $generator_id, $collection_title;
+                $self->msg->(sprintf "%s: Have '%s'", $generator_id, $collection_title);
                 $collections{ $collection_title } = $store->find_collection( $exists->[0]->{collection_id});
             }
         }

@@ -18,6 +18,7 @@ GetOptions(
     'alias|a=s' => \my $mount_alias,
     'config|f=s' => \my $config_file,
     'wipe' => \my $wipe_fts,
+    'verbose' => \my $verbose,
 );
 
 my $thesaurus = Filesys::DB::FTS::Thesaurus->load('thesaurus-ecb.yaml');

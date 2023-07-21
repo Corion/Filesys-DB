@@ -156,6 +156,8 @@ $expected = [
 is $collections_sizes, $expected, "Adding a file creates the expected collections";
 
 
-# remove an item from the documents and regenerate the collections (?!)
+# remove an item from the documents and regenerate the collections
+# Currently this should fail as we don't wipe the collection before recreating
+# it.
 
 done_testing();
