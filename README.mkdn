@@ -17,6 +17,20 @@ Filesys::DB - store and access filesystem metadata in SQLite
 
 Looks for a config file and a default config file, and initialize from there
 
+## `->decode_filename $filename_octets`
+
+    my $filename = $store->decode_filename( $octets );
+
+Decodes a filename in the file-system local encoding to Unicode.
+
+## `->to_local`
+
+    my $f = $store->to_local( 'documents', $filename );
+    say sprintf "%s is %d bytes", $filename, -s $f;
+
+Return a local filename, as octets. You can perform
+file operations on the result string.
+
 ## `->integrity_check`
 
     my $problems = $fs->integrity_check()->fetchall_arrayref({});
