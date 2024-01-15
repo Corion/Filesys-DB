@@ -276,10 +276,10 @@ use Data::Dumper; warn Dumper $tmp_res;
 
     for (@$tmp_res) {
         if( $_->{count} == @$rows ) {
-            warn "'$_' is implied ( $_->{count} )";
+            warn "$_->{generator_visual} / '$_->{filter}' is implied ( $_->{count} )";
             push $res->{implied}->@*, $_
         } else {
-            warn "'$_' refines ( $_->{count} )";
+            warn "$_->{generator_visual} / '$_->{filter}' refines ( $_->{count} )";
             push $res->{refine}->@*, $_
         }
     }
