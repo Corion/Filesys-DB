@@ -35,7 +35,7 @@ my $thesaurus = Filesys::DB::FTS::Thesaurus->load('thesaurus-search.yaml');
 my $config = {};
 my $user_config = {};
 if(! defined $config_file ) {
-    if ( 'filesys-db.yaml' ) {
+    if ( -f 'filesys-db.yaml' ) {
         $config_file = 'filesys-db.yaml';
     } else {
         $user_config = {
