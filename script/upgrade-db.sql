@@ -6,6 +6,7 @@ no warnings 'experimental::signatures';
 use DBI;
 use Getopt::Long;
 use File::Temp 'tempfile';
+use File::Copy 'move';
 use POSIX 'strftime';
 use DBIx::RunSQL;
 use Filesys::DB::FTS::Tokenizer;
@@ -57,8 +58,8 @@ sub migrate_db( $schema_def, $db_file ) {
     if( $verbose ) {
         say "Moving old DB to '$backupname'";
     }
-    rename $db_file => $backupname or die "Can't rename $db_file to $backupname: $!";
-    rename $tempname => $db_file or die "Can't rename $tempname to $db_file: $!";
+    move $db_file => $backupname or die "Can't rename $db_file to $backupname: $!";
+    move $tempname => $db_file or die "Can't rename $tempname to $db_file: $!";
 }
 
 for my $f (@ARGV) {

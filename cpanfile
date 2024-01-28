@@ -1,5 +1,6 @@
 requires 'POSIX' => '== 1.94'; # to allow installation with 5.32 ...
 requires 'File::Spec';
+requires 'File::Copy';
 requires 'Getopt::Long';
 requires 'Encode';
 requires 'JSON';

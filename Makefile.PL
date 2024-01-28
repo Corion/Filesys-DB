@@ -60,6 +60,7 @@ my %module = (
         'Getopt::Long'         => 0,
         'Encode'               => 0,
         'File::Basename'       => 0,
+        'File::Copy'           => 0,
         'JSON'                 => 0,
         'JSON::Path'           => 0,
         'YAML'                 => 0,
