@@ -476,6 +476,10 @@ SQL
 sub _inflate_filename( $self, $mountpoint, $filename ) {
     my $mp = $self->mountpoints->{$mountpoint};
     # Why do we need this? JSON->decode does not return UTF-8 strings?!
+
+    croak "Unknown mountpoint '$mountpoint'"
+        unless $mp;
+
     $filename = decode( 'UTF-8', $filename );
 
     $filename = join "/", $mp->{directory}->value, $filename;
