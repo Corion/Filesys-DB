@@ -4,6 +4,7 @@ use utf8; # does that help?
 no warnings 'experimental::signatures';
 use feature 'signatures';
 
+use Encode;
 use Lingua::Stem;
 use Lingua::Stem::Cistem;
 use Lingua::Stem::Es;
