@@ -12,12 +12,16 @@ use Filesys::DB::FTS::Tokenizer;
 
 GetOptions(
     'schema|f=s' => \my $schema_file,
+    'verbose'    => \my $verbose,
 );
 
 sub migrate_db( $schema_def, $db_file ) {
     my( $fh, $tempname ) = tempfile();
     close $fh;
 
+    if( $verbose ) {
+        say "Creating new DB as '$tempname'";
+    }
     my $new_dbh = DBIx::RunSQL->create(
         dsn     => "dbi:SQLite:dbname=$tempname",
         sql     => $schema_def,
@@ -35,16 +39,20 @@ sub migrate_db( $schema_def, $db_file ) {
 
     $dbh->do("attach database '$tempname' as new");
     $dbh->do("attach database '$db_file' as old");
-    
+
     DBIx::RunSQL->run_sql_file(
-        dbh => $dbh,
-        fh => \*DATA,
+        dbh     => $dbh,
+        fh      => \*DATA,
+        verbose => $verbose,
     );
 
     $dbh->disconnect;
 
     my $timestamp = strftime '%Y%m%d-%H%M%S', localtime;
     (my $backupname = $db_file) =~ s!\.!.$timestamp.!;
+    if( $verbose ) {
+        say "Moving old DB to '$backupname'";
+    }
     rename $db_file => $backupname or die "Can't rename $db_file to $backupname: $!";
     rename $tempname => $db_file or die "Can't rename $tempname to $db_file: $!";
 }
@@ -52,6 +60,8 @@ sub migrate_db( $schema_def, $db_file ) {
 for my $f (@ARGV) {
     migrate_db( $schema_file => $f );
 }
+
+# [ ] Read the tables to migrate from sql/create.sql instead of hardcoding?!
 
 __DATA__
 insert into new.filesystem_entry      select entry_json, entry_id           from old.filesystem_entry;
