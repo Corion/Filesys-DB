@@ -15,6 +15,10 @@ GetOptions(
     'verbose'    => \my $verbose,
 );
 
+if( ! @ARGV ) {
+    die "No DB file to migrate given\n";
+}
+
 sub migrate_db( $schema_def, $db_file ) {
     my( $fh, $tempname ) = tempfile();
     close $fh;
