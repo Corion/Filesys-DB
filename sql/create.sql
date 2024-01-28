@@ -105,15 +105,17 @@ CREATE VIRTUAL TABLE filesystem_entry_fts5
 );
 
 -- Triggers to keep the FTS index up to date.
---CREATE TRIGGER filesystem_entry_ai AFTER INSERT ON filesystem_entry BEGIN
---  INSERT INTO filesystem_entry_fts5(html, title, "language", entry_id) VALUES (new.html, new.title, new."language", new.entry_id); --
+DROP TRIGGER IF EXISTS filesystem_entry_ai;
+CREATE TRIGGER filesystem_entry_ai AFTER INSERT ON filesystem_entry BEGIN
+  INSERT INTO filesystem_entry_fts5(html, title, "language", entry_id) VALUES (new.html, new.title, new."language", new.entry_id); --
+END;
+
+--CREATE TRIGGER filesystem_entry_ad AFTER DELETE ON filesystem_entry BEGIN
+--  INSERT INTO filesystem_entry_fts5(filesystem_entry_fts5, html, title, "language", entry_id) VALUES('delete', old.html, old.title, old."language", old.entry_id);
 --END;
---
-----CREATE TRIGGER filesystem_entry_ad AFTER DELETE ON filesystem_entry BEGIN
-----  INSERT INTO filesystem_entry_fts5(filesystem_entry_fts5, html, title, "language", entry_id) VALUES('delete', old.html, old.title, old."language", old.entry_id);
-----END;
---
---CREATE TRIGGER filesystem_entry_au AFTER UPDATE ON filesystem_entry BEGIN
---  --INSERT INTO filesystem_entry_fts5(filesystem_entry_fts5, html, title, "language", entry_id) VALUES('delete', old.html, old.title, old."language", old.entry_id);
---  INSERT INTO filesystem_entry_fts5(html, title, "language", entry_id) VALUES (new.html, new.title, new."language", new.entry_id);
---END;
+
+DROP TRIGGER IF EXISTS filesystem_entry_au;
+CREATE TRIGGER filesystem_entry_au AFTER UPDATE ON filesystem_entry BEGIN
+  --INSERT INTO filesystem_entry_fts5(filesystem_entry_fts5, html, title, "language", entry_id) VALUES('delete', old.html, old.title, old."language", old.entry_id);
+  INSERT INTO filesystem_entry_fts5(html, title, "language", entry_id) VALUES (new.html, new.title, new."language", new.entry_id);
+END;
