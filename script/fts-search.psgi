@@ -222,8 +222,10 @@ sub filters( $search, $filters, $rows ) {
         -- we should have the FTS last, not first
         with matching_documents as (
                 SELECT
-                         fts.entry_id
+                         0+fts.entry_id as entry_id
                 FROM filesystem_entry_fts5 fts
+                JOIN filesystem_entry fs
+                  ON fs.entry_id = fts.entry_id
             where (filesystem_entry_fts5 MATCH :search)
         )
         , collections as (
