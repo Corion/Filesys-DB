@@ -61,6 +61,12 @@ my $store = Filesys::DB->new(
     },
 );
 
+$store->dbh->do("PRAGMA journal_mode = WAL;");
+$store->dbh->do("PRAGMA synchronous = normal;");
+$store->dbh->do("PRAGMA temp_store = memory;");
+$store->dbh->do("PRAGMA mmap_size = 30000000000;");
+$store->dbh->do('PRAGMA analysis_limit=1000');
+
 sub left_ell($str,$len) {
     #warn $str;
     if( length($str) > $len-3 ) {
