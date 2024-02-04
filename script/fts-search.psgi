@@ -122,7 +122,7 @@ sub _query( $search, $filterset ) {
             FROM filesystem_entry_fts5 fts
             JOIN filesystem_entry fs
             ON fs.entry_id = fts.entry_id
-            where fts.html MATCH :search
+            where (filesystem_entry_fts5 MATCH :search)
         order by rank
 
 
@@ -224,7 +224,7 @@ sub filters( $search, $filters, $rows ) {
                 SELECT
                          fts.entry_id
                 FROM filesystem_entry_fts5 fts
-                where fts.html MATCH :search
+            where (filesystem_entry_fts5 MATCH :search)
         )
         , collections as (
             select c.title as filter
