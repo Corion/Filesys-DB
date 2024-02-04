@@ -110,7 +110,8 @@ sub _collection_filter( $parameters, $filterset ) {
               # XXX we trust the filter names and values here!
               # we need to filter on the allowed names and values!
               $parameters->{'$generator_id_' . $count} = $k;
-              qq{ JOIN collections c$count on (0+d.entry_id = 0+c$count.entry_id and c$count.generator_id = :generator_id_$count and c$count.filter IN ($placeholders))}
+              #qq{ JOIN collections c$count on (0+d.entry_id = 0+c$count.entry_id and c$count.generator_id = :generator_id_$count and c$count.filter IN ($placeholders))}
+              qq{ JOIN collections c$count on (0+d.entry_id = 0+c$count.entry_id and c$count.filter IN ($placeholders))}
         } sort keys $filters->%*;
 
     return $filter_clause;
