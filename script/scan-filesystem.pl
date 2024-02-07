@@ -10,6 +10,7 @@ use PerlX::Maybe;
 use Filesys::DB;
 use Filesys::DB::Watcher;
 use Filesys::DB::Operation;
+use Filesys::DB::TermIO 'status', 'msg';
 
 use Getopt::Long;
 use POSIX 'strftime';
@@ -70,61 +71,6 @@ if( $mount_alias && !@ARGV ) {
 
 # We want a breadth-first FS scan, preferring the most recent entries
 # over older entries (as we assume that old entries don't change much)
-
-# Maybe this should move into its own, tiny, tiny module?!
-# or we should bring Term::Output::List up to date/onto CPAN
-{
-    my $last;
-    my $colcount;
-
-    our $use_tput = `tput cols`;
-    state $is_tty = -t STDOUT;
-
-    sub get_colcount() {
-        if( $use_tput ) {
-            $SIG{WINCH} = sub {
-                undef $colcount;
-            };
-
-            return 0+`tput cols`
-        } elsif( $^O =~ /mswin/i ) {
-            require Win32::Console;
-            return [Win32::Console->new()->Size()]->[0]
-        } else {
-            return undef
-        }
-    }
-
-    sub col_trunc($msg) {
-        $colcount //= get_colcount();
-        my $vis = $msg;
-        if( length($msg) > $colcount ) {
-             $vis = substr( $msg, 0, $colcount-4 ) . '...';
-        }
-        return $vis
-    }
-
-    sub status($msg) {
-        return if ! $is_tty; # no status if nobody is watching
-        local $|=1;
-        my $rubout = "";
-        if( $last ) {
-            $rubout .= "\r" . col_trunc(" " x length($last)) . "\r";
-        };
-        my $vis = col_trunc($msg);
-        print $rubout.$vis."\r";
-        $last = $vis;
-    }
-
-    sub msg($msg) {
-        my $_last = $last;
-        status("");
-        say $msg;
-        status($_last);
-    }
-    # erase any still active status message
-    END { status(""); }
-}
 
 sub scan_tree_db( %options ) {
     $options{ level } //= 0;

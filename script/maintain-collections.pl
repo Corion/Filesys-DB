@@ -10,6 +10,7 @@ use PerlX::Maybe;
 use Filesys::DB;
 use Filesys::DB::Watcher;
 use Filesys::DB::Operation;
+use Filesys::DB::TermIO 'status', 'msg';
 
 use Carp 'croak';
 use Getopt::Long;
@@ -58,12 +59,8 @@ if( $mount_alias and $mountpoint ) {
 my $op = Filesys::DB::Operation->new(
     store => $store,
     dry_run => $dry_run,
-    status => sub($action,$location) {
-        status( sprintf "% 8s | %s", $action, $location );
-    },
-    msg => sub($str) {
-        msg( sprintf "%s", $str );
-    },
+    status => \&status,
+    msg    => \&msg,
 );
 
 if( $wipe ) {
