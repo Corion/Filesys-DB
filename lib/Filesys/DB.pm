@@ -242,7 +242,6 @@ sub get_mountpoint_alias( $self, $_filename ) {
             $filename = $_filename;
         }
         my $fn = $filename->value;
-        $fn =~ s!\\!/!g;
 
         if( index( $fn, $mp->{$alias}->{directory}->value ) == 0 ) {
             return ($mp->{$alias}->{directory}, $alias)

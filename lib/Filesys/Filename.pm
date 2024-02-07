@@ -28,6 +28,7 @@ has 'value' => (
 );
 
 sub from_native( $self, $str, $encoding = $default_encoding ) {
+    $str =~ s!\\!/!g;
     $self->new( encoding => $encoding, value => decode( $default_encoding => $str ))
 }
 
