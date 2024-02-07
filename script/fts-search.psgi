@@ -436,6 +436,8 @@ sub search_page( $c ) {
         filterset => $filterset,
     );
     $c->render('index');
+
+    $store->dbh->do('PRAGMA optimize');
 }
 
 get '/index.html' => \&search_page;
