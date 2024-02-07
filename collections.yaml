@@ -1,8 +1,9 @@
 ---
 # We assume that every generator partitions the filesystem_entry space
 # and an entry does not appear in two different parts.
-generator_id: creators
-visual: Creators
+generator_id: extract_creators
+cluster_visual: Creators
+cluster_name: Creators
 query: |
         select entry_id
              , case
@@ -12,8 +13,9 @@ query: |
           from filesystem_entry fs
          where collection_title is not null
 ---
-generator_id: languages
-visual: Languages
+generator_id: extract_languages
+cluster_visual: Languages
+cluster_name: languages
 query: |
         select entry_id
              , json_extract(fs.entry_json, '$.language') as collection_title

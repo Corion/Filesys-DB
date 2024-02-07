@@ -484,9 +484,10 @@ sub maintain_collections( $self, %options ) {
     # by a human:
 
     my $generator_id = $options{generator_id};
-    my $query = $options{query};
-    my $visual = $options{visual};
-    my $store = $self->store;
+    my $query        = $options{query};
+    my $visual       = $options{visual};
+    my $name         = $options{name};
+    my $store        = $self->store;
 
     my $touched = $store->selectall_named(<<'', $generator_id);
     with generated as (
@@ -532,17 +533,18 @@ sub maintain_collections( $self, %options ) {
 
             if( ! $exists->@* ) {
                 # create the collection
-                $self->msg->(sprintf "%s: Creating '%s'", $generator_id, $collection_title);
+                $self->msg->(sprintf "%s: Creating %s '%s'", $generator_id, $name, $collection_title);
                 $collections{ $collection_title } = $store->insert_or_update_collection({
                     generator_id => $generator_id,
                     title => $collection_title,
-                    generator_visual => $visual,
+                    cluster_visual => $visual,
+                    cluster_name => $name,
                     # well, this should come from the query, no?!
                     collection_type => 'documents',
                 });
 
             } else {
-                $self->msg->(sprintf "%s: Have '%s'", $generator_id, $collection_title);
+                $self->msg->(sprintf "%s: Have %s '%s'", $generator_id, $name, $collection_title);
                 $collections{ $collection_title } = $store->find_collection( $exists->[0]->{collection_id});
             }
         }
