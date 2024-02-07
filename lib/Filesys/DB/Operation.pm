@@ -490,6 +490,9 @@ sub maintain_collections( $self, %options ) {
     my $store        = $self->store;
     my $wipe         = $options{wipe};
 
+    croak "Need a cluster name in the 'name' parameter"
+        unless defined $name;
+
     my $touched = $store->selectall_named(<<'', $generator_id);
     with generated as (
        select fm.collection_id

@@ -1,6 +1,6 @@
 #!perl
 use 5.020;
-use Test2::V0;
+use Test2::V0 -no_srand;
 use feature 'signatures';
 no warnings 'experimental::signatures';
 
@@ -59,8 +59,9 @@ note "Generating collections";
 
 my @generators = (
     {
-        generator_id => 'creators',
-        visual       => 'Creators',
+        generator_id   => 'test_creators',
+        name   => 'creator',
+        visual => 'Creator',
         query        => <<'SQL',
             select entry_id
                 , json_extract(fs.entry_json, '$.content.creator') as collection_title
@@ -70,8 +71,9 @@ SQL
     },
 
     {
-        generator_id => 'languages',
-        visual => 'Languages',
+        generator_id   => 'test_languages',
+        name   => 'language',
+        visual => 'Language',
         query => <<'SQL',
                 select entry_id
                     , json_extract(fs.entry_json, '$.language') as collection_title
@@ -87,6 +89,7 @@ for my $gen (@generators) {
         generator_id => $gen->{generator_id},
         query        => $gen->{query},
         visual       => $gen->{visual},
+        name         => $gen->{name},
     );
 }
 
@@ -104,10 +107,10 @@ SQL
 note "Launching filter tests";
 
 my $expected = [
-    { title => 'Corion',   count => 2, generator_id => 'creators' },
-    { title => 'A.U.Thor', count => 1, generator_id => 'creators' },
-    { title => 'en',       count => 3, generator_id => 'languages' },
-    { title => 'de',       count => 1, generator_id => 'languages' },
+    { title => 'Corion',   count => 2, generator_id => 'test_creators' },
+    { title => 'A.U.Thor', count => 1, generator_id => 'test_creators' },
+    { title => 'en',       count => 3, generator_id => 'test_languages' },
+    { title => 'de',       count => 1, generator_id => 'test_languages' },
 ];
 
 is $collections_sizes, $expected, "A first round creates the expected collections";
@@ -119,6 +122,7 @@ for my $gen (@generators) {
         generator_id => $gen->{generator_id},
         query        => $gen->{query},
         visual       => $gen->{visual},
+        name         => $gen->{name},
     );
 }
 is $collections_sizes, $expected, "Collection maintenance is idempotent";
@@ -130,6 +134,7 @@ for my $gen (@generators) {
         generator_id => $gen->{generator_id},
         query        => $gen->{query},
         visual       => $gen->{visual},
+        name         => $gen->{name},
     );
 }
 
@@ -147,10 +152,10 @@ SQL
 note "Launching filter tests";
 
 $expected = [
-    { title => 'Corion',   count => 2, generator_id => 'creators' },
-    { title => 'A.U.Thor', count => 2, generator_id => 'creators' },
-    { title => 'en',       count => 4, generator_id => 'languages' },
-    { title => 'de',       count => 1, generator_id => 'languages' },
+    { title => 'Corion',   count => 2, generator_id => 'test_creators' },
+    { title => 'A.U.Thor', count => 2, generator_id => 'test_creators' },
+    { title => 'en',       count => 4, generator_id => 'test_languages' },
+    { title => 'de',       count => 1, generator_id => 'test_languages' },
 ];
 
 is $collections_sizes, $expected, "Adding a file creates the expected collections";
