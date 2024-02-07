@@ -75,5 +75,6 @@ for my $gen (@generators) {
         query        => $gen->{query},
         visual       => $gen->{cluster_visual},
         name         => $gen->{cluster_name},
+        wipe         => $wipe,
     );
 }

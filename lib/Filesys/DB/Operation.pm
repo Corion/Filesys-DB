@@ -488,6 +488,7 @@ sub maintain_collections( $self, %options ) {
     my $visual       = $options{visual};
     my $name         = $options{name};
     my $store        = $self->store;
+    my $wipe         = $options{wipe};
 
     my $touched = $store->selectall_named(<<'', $generator_id);
     with generated as (
@@ -504,6 +505,8 @@ sub maintain_collections( $self, %options ) {
     )
     select * from touched
 
+    # Hrrr - we don't want to wipe the whole collection id, but only the
+    # elements in that collection that were added by _this_ generator
     my $generated = $store->selectall_named(<<'', $generator_id);
     with generated as (
        select collection_id
@@ -511,6 +514,21 @@ sub maintain_collections( $self, %options ) {
         where fm.generator_id = :generator_id
     )
     select * from generated
+
+    if( $wipe ) {
+        my $generated = $store->selectall_named(<<'', $generator_id);
+            delete
+              from filesystem_membership
+             where generator_id = :generator_id
+
+        $generated = $store->selectall_named(<<'', $generator_id);
+            delete
+              from filesystem_collection
+             where generator_id = :generator_id
+
+    }
+
+    # Revisit the collections and delete the empty collections
 
     # Find the set of collections that the queries describe:
     my $collections = $store->selectall_named( $query );
