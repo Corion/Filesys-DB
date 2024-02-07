@@ -12,6 +12,8 @@ use YAML 'LoadFile';
 use PerlX::Maybe;
 use Text::Table;
 
+use Time::HiRes;
+
 use Filesys::DB::FTS::Tokenizer;
 use Filesys::DB::FTS::Thesaurus;
 
@@ -164,9 +166,19 @@ sub _query( $search, $filterset ) {
           $filter_clause
 
         my $sth = $store->bind_named($filtered, \%parameters);
-        $sth->execute();
-        return $sth->fetchall_arrayref({});
+        return fetch_timed( $sth );
     }
+}
+
+sub fetch_timed( $sth ) {
+    my $start = time();
+    $sth->execute();
+    my $res = $sth->fetchall_arrayref({});
+    my $taken = time() - $start;
+    my $min = int( $taken / 60 );
+    my $sec = $taken % 60;
+    warn sprintf("Took %02d:%02d", $min, $sec);
+    return $res
 }
 
 sub query( $search, $filters ) {
