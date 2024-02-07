@@ -75,7 +75,8 @@ my @generators = LoadFile($collections);
 for my $gen (@generators) {
     $op->maintain_collections(
         generator_id => $gen->{generator_id},
-        query => $gen->{query},
-        visual => $gen->{visual},
+        query        => $gen->{query},
+        visual       => $gen->{cluster_visual},
+        name         => $gen->{cluster_name},
     );
 }

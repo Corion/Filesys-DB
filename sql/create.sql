@@ -72,14 +72,22 @@ create unique index idx_filesystem_relation_relation_id on filesystem_relation (
 create unique index idx_filesystem_relation_child_parent_id on filesystem_relation (relation_type,parent_id,child_id);
 
 create table filesystem_collection (
-      collection_json      varchar(65520) not null default '{}'
-    , collection_id        integer primary key not null
-    , collection_type      generated always as (json_extract(collection_json, '$.collection_type')) -- 'directory', 'album', ???
-    , parent_id            generated always as (json_extract(collection_json, '$.parent_id'))
-    , title                generated always as (json_extract(collection_json, '$.title'))
-    , image                generated always as (json_extract(collection_json, '$.image'))
-    , generator_id         generated always as (json_extract(collection_json, '$.generator_id'))
-    , generator_visual     generated always as (json_extract(collection_json, '$.generator_visual'))
+      collection_json        varchar(65520) not null default '{}'
+    , collection_id          integer primary key not null
+    , collection_type        generated always as (json_extract(collection_json, '$.collection_type')) -- 'directory', 'album', 'documents', ???
+    , collection_type_visual generated always as (json_extract(collection_json, '$.collection_type_visual')) -- 'Directory' ???
+    , parent_id              generated always as (json_extract(collection_json, '$.parent_id'))
+    , title                  generated always as (json_extract(collection_json, '$.title'))
+    , image                  generated always as (json_extract(collection_json, '$.image'))
+
+    -- we want another collection type thing, that says "Language", "Genre", or whatever...
+    , cluster_name           generated always as (json_extract(collection_json, '$.cluster_name'))
+    , cluster_visual         generated always as (json_extract(collection_json, '$.cluster_visual'))
+
+    -- generator is for automatic category creation so a generator can wipe/recreate
+    -- its stuff
+    , generator_id           generated always as (json_extract(collection_json, '$.generator_id'))
+    , generator_visual       generated always as (json_extract(collection_json, '$.generator_visual'))
 );
 create unique index idx_filesystem_collection_collection_id on filesystem_collection (collection_id);
 create unique index idx_filesystem_collection_directory_parent_id on filesystem_collection (collection_type,parent_id);
