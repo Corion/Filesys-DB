@@ -150,6 +150,7 @@ sub bind_named( $self, $sql, $parameters ) {
         my $dbh = $self->dbh;
         my $ok = eval {
             $sth = $dbh->prepare_cached($sql);
+            #warn $sql;
             1;
         };
         if( ! $ok ) {
