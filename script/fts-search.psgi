@@ -109,7 +109,7 @@ sub _collection_filter( $parameters, $filterset ) {
                                  } $filters->{$k}->@*;
               # XXX we trust the filter names and values here!
               # we need to filter on the allowed names and values!
-              $parameters->{'$generator_id_' . $count} = $k;
+              $parameters->{'$cluster_name_' . $count} = $k;
               #qq{ JOIN collections c$count on (0+d.entry_id = 0+c$count.entry_id and c$count.generator_id = :generator_id_$count and c$count.filter IN ($placeholders))}
               qq{ JOIN collections c$count on (0+d.entry_id = 0+c$count.entry_id and c$count.filter IN ($placeholders))}
         } sort keys $filters->%*;
@@ -148,7 +148,7 @@ sub _query( $search, $filterset ) {
         )
         , collections as (
             select c.title as filter
-                 , c.generator_id
+                 , c.cluster_name
                  , m.entry_id
               from filesystem_collection c
               join filesystem_membership m on 0+m.collection_id = 0+c.collection_id
@@ -216,17 +216,17 @@ sub query( $search, $filters ) {
     return $tmp_res
 }
 
+# This implements suggesting more filters for the current query
 sub filters( $search, $filters, $rows ) {
     local $Filesys::DB::FTS::Tokenizer::tokenizer_language = 'en';
     local $Filesys::DB::FTS::Tokenizer::thesaurus = $thesaurus;
 
-    # XXX detect the language from the snippet? Maybe using trigrams? Or have the user select it?
+    # XXX detect the language from the search snippet? Maybe using trigrams? Or have the user select it?
 
     my %parameters = ( '$search' => $search );
     my $filter_clause = _collection_filter(\%parameters, $filters );
 
     my $sql = <<"";
-        -- we should have the FTS last, not first
         with matching_documents as (
                 SELECT
                          0+fts.entry_id as entry_id
@@ -237,7 +237,6 @@ sub filters( $search, $filters, $rows ) {
         )
         , collections as (
             select c.title as filter
-                 , c.generator_id
                  , m.entry_id
               from filesystem_collection c
               join filesystem_membership m on 0+m.collection_id = 0+c.collection_id
@@ -251,44 +250,43 @@ sub filters( $search, $filters, $rows ) {
         )
         , more_collections as (
             select c.title as filter
-                 , ifnull( json_extract( c.collection_json, '\$.generator_visual' ), 'Directory') as generator_visual
-                 , c.generator_id
+                 , ifnull( json_extract( c.collection_json, '\$.collection_type' ), 'Directory') as collection_type
+                 , cluster_visual
+                 , cluster_name
                  , count(*) as c
-              from filesystem_collection c
+              from filtered d
+              join filesystem_collection c on 0+d.entry_id=0+m.entry_id
               join filesystem_membership m on 0+m.collection_id = 0+c.collection_id
-              join filtered d on 0+d.entry_id=0+m.entry_id
-              group by filter, generator_visual, c.generator_id
+             group by filter, collection_type, cluster_name
         )
         select more_collections.filter
-             , generator_visual
-             , generator_id
+             , collection_type
+             , cluster_name
+             , cluster_visual
              , c as "count"
           from more_collections
-      order by generator_visual, c desc
+      order by c desc, cluster_visual, filter
 
     my $sth = $store->bind_named($sql, \%parameters);
-    $sth->execute();
-    my $tmp_res = $sth->fetchall_arrayref({});
-
-use Data::Dumper; warn Dumper $tmp_res;
+    my $tmp_res = fetch_timed( $sth );
 
     for (@$tmp_res) {
-        $_->{generator_visual} = decode( 'UTF-8', $_->{generator_visual} );
+        $_->{collection_title} = decode( 'UTF-8', $_->{collection_title} );
         $_->{filter} = decode( 'UTF-8', $_->{filter} );
     }
 
     my $res = {
         implied => [],
-        existing => $filters,
+        existing => $filters, # is "existing" and "explicit" the same? Rename "existing" ?
         refine  => [],
     };
 
     for (@$tmp_res) {
         if( $_->{count} == @$rows ) {
-            warn "$_->{generator_visual} / '$_->{filter}' is implied ( $_->{count} )";
+            warn "$_->{cluster_name} / '$_->{filter}' is implied ( $_->{count} )";
             push $res->{implied}->@*, $_
         } else {
-            warn "$_->{generator_visual} / '$_->{filter}' refines ( $_->{count} )";
+            warn "$_->{cluster_name} / '$_->{filter}' refines ( $_->{count} )";
             push $res->{refine}->@*, $_
         }
     }
@@ -478,7 +476,7 @@ __DATA__
 <input name="q" type="text" value="<%= $query %>"/><button type="submit">Search</button>
 </form>
 % if( $rows ) {
-%     my $last_gen = '';
+%     my $last_cluster = '';
 %     if( $filters->{implied}->@*) {
         <h3>
 %       for my $filter ($filters->{implied}->@*) {
@@ -487,11 +485,11 @@ __DATA__
         </h3>
 %     }
 %     for my $filter ($filters->{refine}->@*) {
-%         if( $last_gen ne $filter->{generator_visual}) {
-%             $last_gen = $filter->{generator_visual};
-    <h3><%= $filter->{generator_visual} %></h3>
+%         if( $last_cluster ne $filter->{cluster_visual}) {
+%             $last_cluster = $filter->{cluster_visual};
+    <h3><%= $filter->{cluster_visual} %></h3>
 %          }
-%          my $param = url_with->query({ filter => $filterset->as_query( $filter->{generator_id}, $filter->{filter}) });
+%          my $param = url_with->query({ filter => $filterset->as_query( $filter->{cluster_name}, $filter->{filter}) });
     <p><a href="<%= $param %>"><%= $filter->{filter} %></a> (<%= $filter->{count} %>)</p>
 %     }
 %     for my $row (@$rows) {
