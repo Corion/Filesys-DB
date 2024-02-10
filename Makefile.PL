@@ -55,6 +55,7 @@ my %module = (
     },
 
     PREREQ_PM => {
+        'experimental'         => 0, # because we use some features that once were experimental
         'POSIX'                => 0, # for 'setsid' on POSIXish systems
         'File::Spec'           => 0,
         'Getopt::Long'         => 0,
@@ -68,7 +69,6 @@ my %module = (
 
         @win32_modules,
 
-        # 'Filter::signatures'        => '0.09',
         'Carp'                      => 0,
         'DBD::SQLite'               => '1.71_06',
         'DBIx::RunSQL'              => 0,

@@ -1,8 +1,7 @@
 package Filesys::DB::FTS::Tokenizer;
 use 5.020;
 use utf8; # does that help?
-no warnings 'experimental::signatures';
-use feature 'signatures';
+use experimental 'signatures';
 
 our $VERSION = '0.01';
 

@@ -2,8 +2,7 @@ package Filesys::DB;
 use 5.020;
 use Moo 2;
 #use Filter::signatures;
-use feature 'signatures';
-no warnings 'experimental::signatures';
+use experimental 'signatures';
 
 use DBI ':sql_types';
 use DBD::SQLite;

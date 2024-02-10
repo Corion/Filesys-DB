@@ -1,9 +1,7 @@
 package Filesys::DB::Operation;
 use 5.020;
-#use Filter::signatures;
 use Moo 2;
-use feature 'signatures';
-no warnings 'experimental::signatures';
+use experimental 'signatures';
 
 our $VERSION = '0.01';
 
