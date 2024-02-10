@@ -3,6 +3,8 @@ use 5.020;
 
 use experimental 'signatures';
 
+our $VERSION = '0.01';
+
 use Exporter 'import';
 our @EXPORT_OK = (qw(status msg));
 

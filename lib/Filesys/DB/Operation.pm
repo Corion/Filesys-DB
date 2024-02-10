@@ -4,6 +4,9 @@ use 5.020;
 use Moo 2;
 use feature 'signatures';
 no warnings 'experimental::signatures';
+
+our $VERSION = '0.01';
+
 use Scalar::Util 'weaken';
 use File::Basename;
 

@@ -3,6 +3,7 @@ use 5.020;
 use File::ChangeNotify;
 use Moo 2;
 
+our $VERSION = '0.01';
 use feature 'signatures';
 no warnings 'experimental::signatures';
 
