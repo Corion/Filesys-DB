@@ -218,26 +218,28 @@ sub query( $search, $filters ) {
         $r->{snippet} = $_->{snippet};
         $_ = $r;
 
-        my @parts = split m!(?=<-mark->)!, $r->{snippet};
+        if( defined $r->{snippet}) {
+            my @parts = split m!(?=<-mark->)!, $r->{snippet};
 
-        for ( @parts ) {
-            if( /<-mark->/ ) {
+            for ( @parts ) {
+                if( /<-mark->/ ) {
 
-                s!\A(.*?)<-mark->!left_ell($1,$context)."<-mark->"!ems;
-                s!</-mark->(.*?)\z!"</-mark->".right_ell($1,$context)!ems;
-                s!<-mark->!<b>!;
-                s!</-mark->!</b>!;
+                    s!\A(.*?)<-mark->!left_ell($1,$context)."<-mark->"!ems;
+                    s!</-mark->(.*?)\z!"</-mark->".right_ell($1,$context)!ems;
+                    s!<-mark->!<b>!;
+                    s!</-mark->!</b>!;
 
 
-                # but how do we handle things between two matches that are short?!
-                # bar</-mark>foo<-mark->baz will turn into bar</-mark>foo... ...foo<-mark->baz
+                    # but how do we handle things between two matches that are short?!
+                    # bar</-mark>foo<-mark->baz will turn into bar</-mark>foo... ...foo<-mark->baz
 
-            } else {
-                $_ = left_ell($_, $context);
+                } else {
+                    $_ = left_ell($_, $context);
+                }
             }
-        }
 
-        $_->{snippet} = join "", @parts;
+            $_->{snippet} = join "", @parts;
+        }
 
     }
     return $tmp_res
@@ -253,14 +255,30 @@ sub filters( $search, $filters, $rows ) {
     my %parameters = ( '$search' => $search );
     my $filter_clause = _collection_filter(\%parameters, $filters );
 
-    my $sql = <<"";
-        with matching_documents as (
+    my $documents;
+    if( length $search ) {
+        $documents = <<'';
                 SELECT
                          0+fts.entry_id as entry_id
                 FROM filesystem_entry_fts5 fts
                 JOIN filesystem_entry fs
                   ON fs.entry_id = fts.entry_id
             where (filesystem_entry_fts5 MATCH :search)
+
+    } else {
+        $documents = <<'';
+                SELECT
+                         0+fts.entry_id as entry_id
+                FROM filesystem_entry_fts5 fts
+                JOIN filesystem_entry fs
+                  ON fs.entry_id = fts.entry_id
+            ORDER BY fs.entry_id
+
+    }
+
+    my $sql = <<"";
+        with matching_documents as (
+            $documents
         )
         , collections as (
             select c.title as filter
@@ -440,8 +458,10 @@ sub search_page( $c ) {
     my $filter_param = $c->param('filter') // '';
 
     my $filterset = URL::FilterSet->from_query( $filter_param );
-    my $rows = length($search) ? query( $search, $filterset ) : undef;
-    my $filters = length($search) ? filters( $search, $filterset, $rows ) : undef;
+    #my $rows = length($search) ? query( $search, $filterset ) : undef;
+    #my $filters = length($search) ? filters( $search, $filterset, $rows ) : undef;
+    my $rows = query( $search, $filterset );
+    my $filters = filters( $search, $filterset, $rows );
 
     $c->stash(
         query => $search,
