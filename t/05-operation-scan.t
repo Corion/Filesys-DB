@@ -9,6 +9,7 @@ use Filesys::DB;
 use Filesys::DB::Operation;
 use Filesys::DB::FTS::Tokenizer;
 use File::Temp 'tempdir';
+use File::Basename;
 
 my $tempdir = tempdir( CLEANUP => 1 );
 
@@ -63,12 +64,27 @@ $documents = $store->selectall_named(<<'')->[0]->{count};
 
 is $documents, 2, "We don't store the same document twice";
 
+$op->do_scan(
+    directories => [$tempdir],
+    force => 1,
+);
+
+my $new_documents = $store->selectall_named(<<'')->[0]->{count};
+    select count(*) as count
+      from filesystem_entry
+
+is $new_documents, $documents, "Rescanning keeps the number of documents the same";
+
 # Check that $id is in the directory collection for $tempdir?
 
 my $collections = $store->selectall_named(<<'');
-    select *
-      from filesystem_relation
+    select collection_type, title
+      from filesystem_collection
 
-is $collections, [], "We have the expected filesystem relations";
+is $collections, [{
+        collection_type => 'directory',
+        title => basename($tempdir),
+    }], "We scanned one directory and created the corresponding collection"
+    or diag(Dumper $collections);
 
 done_testing();
