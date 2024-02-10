@@ -121,18 +121,35 @@ sub _collection_filter( $parameters, $filterset ) {
 
 sub _query( $search, $filterset ) {
 
-    my $sql = <<'';
-            SELECT
-                  fts.html
-                , 0+fts.entry_id as entry_id
-                , highlight(filesystem_entry_fts5, 0, '<-mark->', '</-mark->') as snippet
-                , fs.filename
-                , fs.entry_json
-            FROM filesystem_entry_fts5 fts
-            JOIN filesystem_entry fs
-            ON fs.entry_id = fts.entry_id
-            where (filesystem_entry_fts5 MATCH :search)
-        order by rank
+    my $sql;
+    if( $search =~ /\S/ ) {
+        $sql = <<'';
+                SELECT
+                    fts.html
+                    , 0+fts.entry_id as entry_id
+                    , highlight(filesystem_entry_fts5, 0, '<-mark->', '</-mark->') as snippet
+                    , fs.filename
+                    , fs.entry_json
+                FROM filesystem_entry_fts5 fts
+                JOIN filesystem_entry fs
+                ON 0+fs.entry_id = 0+fts.entry_id
+                where (filesystem_entry_fts5 MATCH :search)
+            order by rank
+
+    } else {
+        $sql = <<'';
+                SELECT
+                    fts.html
+                    , 0+fts.entry_id as entry_id
+                    , null as snippet
+                    , fs.filename
+                    , fs.entry_json
+                FROM filesystem_entry_fts5 fts
+                JOIN filesystem_entry fs
+                ON fs.entry_id = fts.entry_id
+            order by entry_id
+
+    }
 
 
     if( ! $filterset->has_filters ) {
@@ -220,8 +237,6 @@ sub query( $search, $filters ) {
             }
         }
 
-        $_->{snippet} =~ s!</-mark->(.*?)<-mark->!"</-mark->".mid_ell($1,$context)."<-mark->"!gems;
-        $_->{snippet} =~ s!<(/?)-mark->!<${1}b>!g;
         $_->{snippet} = join "", @parts;
 
     }
