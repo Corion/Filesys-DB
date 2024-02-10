@@ -213,7 +213,12 @@ sub selectall_named_ex($self, %options) {
     # Shouldn't this just be ->execute_named_ex ?!
     my $sql = $options{ sth } // $options{ sql };
     my $sth = $self->bind_lexicals( $sql, $options{ level }+1, $options{ lexicals });
-    $sth->execute;
+    if(! eval {
+        $sth->execute;
+        1;
+    }) {
+        croak "$@\n$sql";
+    }
     # we also want to lock the hashes we return here, I guess
     return $sth->fetchall_arrayref({})
 }
