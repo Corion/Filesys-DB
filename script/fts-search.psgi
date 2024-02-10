@@ -468,7 +468,7 @@ get '/dir/:id' => sub( $c ) {
 #     select distinct collection_name, collection_id where matches.contains entry
 # )
 # [ ] Add RSS generation (?!)
-#
+# [ ] Do categories also work for having (multiple) (musical) genres?
 
 app->start;
 
