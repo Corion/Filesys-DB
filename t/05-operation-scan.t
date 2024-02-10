@@ -65,7 +65,7 @@ is $documents, 2, "We don't store the same document twice";
 
 # Check that $id is in the directory collection for $tempdir?
 
-my $collections = $store->selectall_named(<<'')->[0];
+my $collections = $store->selectall_named(<<'');
     select *
       from filesystem_relation
 
