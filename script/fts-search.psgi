@@ -268,10 +268,8 @@ sub filters( $search, $filters, $rows ) {
     } else {
         $documents = <<'';
                 SELECT
-                         0+fts.entry_id as entry_id
-                FROM filesystem_entry_fts5 fts
-                JOIN filesystem_entry fs
-                  ON fs.entry_id = fts.entry_id
+                         0+fs.entry_id as entry_id
+                FROM filesystem_entry fs
             ORDER BY fs.entry_id
 
     }
@@ -282,6 +280,7 @@ sub filters( $search, $filters, $rows ) {
         )
         , collections as (
             select c.title as filter
+                 , c.cluster_name
                  , m.entry_id
               from filesystem_collection c
               join filesystem_membership m on 0+m.collection_id = 0+c.collection_id
