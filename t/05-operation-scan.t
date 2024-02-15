@@ -78,7 +78,8 @@ is $new_documents, $documents, "Rescanning keeps the number of documents the sam
 # Check that $id is in the directory collection for $tempdir?
 
 my $collections = $store->selectall_named(<<'');
-    select collection_type, title
+    select collection_type
+         , title
       from filesystem_collection
 
 is $collections, [{
