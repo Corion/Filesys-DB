@@ -309,9 +309,11 @@ sub filters( $search, $filters, $rows ) {
              , cluster_visual
              , c as "count"
           from more_collections
-      order by c desc, cluster_visual, filter
+      order by cluster_visual, c desc, filter
 
     my $sth = $store->bind_named($sql, \%parameters);
+        use Data::Dumper; warn Dumper \%parameters;
+        warn $sql;
     my $tmp_res = fetch_timed( $sth );
 
     for (@$tmp_res) {
