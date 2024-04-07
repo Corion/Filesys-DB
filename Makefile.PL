@@ -82,13 +82,14 @@ my %module = (
         'Music::Tag'           => 0,
         'Apache::Tika::Server' => 0,
         'Text::FrontMatter::YAML' => 0,
+        'Text::CleanFragment'  => 0,
+        'Text::Unidecode'      => 0,
 
         'File::ChangeNotify'   => 0,
 
         'Lingua::Stem::Cistem' => 0, # for German
         'Lingua::Stem' => 0, # for the rest
-
-
+        'Lingua::Stem::Es' => 0, # for the rest
     },
     TEST_REQUIRES => {
         'Test::More'   => 0,
