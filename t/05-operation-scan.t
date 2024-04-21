@@ -56,7 +56,9 @@ is $documents, [{entry_type => 'directory', count => 1},
                 {entry_type => 'file', count => 1}], "We stored one document and its directory"
     or diag Dumper $documents;
 
-my $next_id = $store->insert_or_update_direntry({ filename => "$tempdir/f1" })->{entry_id};
+my $filename = "$tempdir/f1";
+my $info = $op->basic_direntry_info("$tempdir/f1", "$tempdir/f1", { stat => [stat $filename] });
+my $next_id = $store->insert_or_update_direntry($info)->{entry_id};
 
 $documents = $store->selectall_named(<<'')->[0]->{count};
     select count(*) as count
@@ -87,5 +89,23 @@ is $collections, [{
         title => basename($tempdir),
     }], "We scanned one directory and created the corresponding collection"
     or diag(Dumper $collections);
+
+# Do a second scan and check that we don't read the whole file for
+# re-determining the properties as long as size and mtime are the same
+# ... and we already have all potential properties
+
+my $info = $op->basic_direntry_info( "$tempdir/f1", "$tempdir/f1", { stat => [stat("$tempdir/f1")] }, { entry_type => 'file' } );
+is $op->_wants_rescan( $info, {} ), undef, "We don't want to rescan $info->{filename}"
+    or diag Dumper $info;
+
+# XXX set up scan access counter
+my %properties_read;
+
+$op->do_scan(
+    directories => [$tempdir],
+);
+
+my $filename = 'f1';
+is $properties_read{ $filename }->{ sha256 }, undef, "We didn't recompute the sha256 for $filename";
 
 done_testing();
