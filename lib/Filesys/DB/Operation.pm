@@ -365,9 +365,12 @@ sub update_properties( $self, $info, %options ) {
     return $info
 }
 
-sub basic_direntry_info( $self, $ent, $fn, $context, $defaults ) {
-    $context //= { stat => [stat($fn)] };
+sub basic_direntry_info( $self, $ent, $fn, $context={ stat => [stat($fn)] }, $defaults={} ) {
+    my $entry_type = $defaults->{entry_type}
+                     // (-f $fn ? 'file' :
+                         -d $fn ? 'directory' : undef);
     return {
+        entry_type => $entry_type,
         %$defaults,
         #filename => $ent,
         filename => $fn,
