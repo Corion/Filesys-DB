@@ -369,8 +369,11 @@ sub basic_direntry_info( $self, $ent, $fn, $context={ stat => [stat($fn)] }, $de
     my $entry_type = $defaults->{entry_type}
                      // (-f $fn ? 'file' :
                          -d $fn ? 'directory' : undef);
+    my $filesize = $defaults->{filesize}
+                     // $context->{stat}->[7];
     return {
         entry_type => $entry_type,
+        filesize => $filesize,
         %$defaults,
         #filename => $ent,
         filename => $fn,
