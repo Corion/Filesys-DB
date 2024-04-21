@@ -289,25 +289,24 @@ our %file_properties = (
      },
 );
 
-sub update_properties( $self, $info, %options ) {
-    my $last_ts = $info->{last_scanned} // '';
-    my $dry_run = exists $options{ dry_run }
-                  ? delete $options{ dry_run }
-                  : $self->dry_run;
+sub _wants_rescan( $self, $info, $options ) {
+    return 1 if $options->{force};
 
-    # This would be a kind of plugin system, maybe?!
     my $do_scan;
-
-    if( exists $options{ context }) {
+    if( exists $options->{ context }) {
         if( ! $info->{last_scanned} ) {
             # This should be guarded by a verbosity/log level thing...
             #$self->msg->("rescan,no_info,$info->{filename}");
             $do_scan = 1
         } else {
-            if( $options{ context }->{stat}
-                and $options{ context }->{stat}->@* ) {
-                my $ts = timestamp($options{ context }->{stat}->[9]);
-                $do_scan = $ts gt $last_ts;
+            if(     $options->{ context }->{stat}
+                and $options->{ context }->{stat}->@* ) {
+                my $ts = timestamp($options->{ context }->{stat}->[9]);
+                $do_scan = $ts gt $options->{ last_ts };
+
+                # XXX also check the file size for equality. These two combined
+                #     should be a good-enough indicator for a full rescan
+
                 #if( $do_scan ) {
                 #    $self->msg->("rescan,modified ($last_ts / $ts),$info->{filename}");
                 #};
@@ -320,7 +319,17 @@ sub update_properties( $self, $info, %options ) {
         };
     };
 
-    $do_scan ||= $options{ force };
+    return $do_scan;
+}
+
+sub update_properties( $self, $info, %options ) {
+    my $last_ts = $options{ last_ts } = $info->{last_scanned} // '';
+    my $dry_run = exists $options{ dry_run }
+                  ? delete $options{ dry_run }
+                  : $self->dry_run;
+
+    # This would be a kind of plugin system, maybe?!
+    my $do_scan = $self->_wants_rescan( $info, \%options );
 
     # A callback can add more data that we then use to do more scanning
     # for example the mime_type is used subsequently for more scanning
