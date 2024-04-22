@@ -99,6 +99,10 @@ sub _applicable_properties( $props, $info, $options, $visual='???' ) {
 
                 # JSON path
                 # Check that it is missing or we are rebuilding
+                # XXX Meh - we want to differentiate here between a path that does not exist
+                #     -> rescan
+                #     vs a path that does exist but is undef
+                #     -> already checked, no need to rescan because it does not have a value
                 $path_cache{ $prop } //= JSON::Path->new( $prop );
                 my $do_update = $options->{ force }
                             || ! defined $path_cache{ $prop }->value($info);

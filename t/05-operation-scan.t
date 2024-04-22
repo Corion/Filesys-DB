@@ -58,7 +58,34 @@ is $documents, [{entry_type => 'directory', count => 1},
 
 my $filename = "$tempdir/f1";
 my $info = $op->basic_direntry_info("$tempdir/f1", "$tempdir/f1", { stat => [stat $filename] });
-my $next_id = $store->insert_or_update_direntry($info)->{entry_id};
+my $info2 = $store->insert_or_update_direntry($info);
+my $next_id = $info2->{entry_id};
+my @props = Filesys::DB::Operation::_applicable_properties( \%Filesys::DB::Operation::file_properties, $info, {} );
+
+is \@props, [['mime_type', $Filesys::DB::Operation::file_properties{'$.mime_type'}],
+             ['sha256',    $Filesys::DB::Operation::file_properties{'$.sha256'}],
+            ], "We want to add a mime type and sha256 on rescanning"
+    or diag Dumper \@props;
+
+# If we don't have the mime type, we can't find the other properties...
+
+my $info3 = $op->update_properties( $info2, force => 1, );
+$info3->{filename}->{value} = $filename;
+ok exists $info3->{ sha256 }, "We have a sha256 now"
+    or diag Dumper $info3;
+ok exists $info3->{ mime_type }, "We have a MIME type now"
+    or diag Dumper $info3;
+ok exists $info3->{ content }, "We have a content tree now"
+    or diag Dumper $info3;
+ok exists $info3->{ content }->{ creator }, "We have a content.creator now"
+    or diag Dumper $info3;
+is $info3->{ content }->{ creator }, undef, "... but content.creator is undef"
+    or diag Dumper $info3;
+
+my @props3 = map { $_->[0] }
+             Filesys::DB::Operation::_applicable_properties( \%Filesys::DB::Operation::file_properties, $info3, {} );
+is \@props3, [], "Existing but undef properties don't get rescanned"
+    or diag Dumper $info3;
 
 $documents = $store->selectall_named(<<'')->[0]->{count};
     select count(*) as count
@@ -94,7 +121,7 @@ is $collections, [{
 # re-determining the properties as long as size and mtime are the same
 # ... and we already have all potential properties
 
-my $info = $op->basic_direntry_info( "$tempdir/f1", "$tempdir/f1", { stat => [stat("$tempdir/f1")] }, { entry_type => 'file' } );
+$info = $op->basic_direntry_info( "$tempdir/f1", "$tempdir/f1", { stat => [stat("$tempdir/f1")] }, { entry_type => 'file' } );
 is $op->_wants_rescan( $info, {} ), undef, "We don't want to rescan $info->{filename}"
     or diag Dumper $info;
 
@@ -105,7 +132,6 @@ $op->do_scan(
     directories => [$tempdir],
 );
 
-my $filename = 'f1';
 is $properties_read{ $filename }->{ sha256 }, undef, "We didn't recompute the sha256 for $filename";
 
 done_testing();
