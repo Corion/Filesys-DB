@@ -38,7 +38,9 @@ my $config = {};
 my $user_config = {};
 if(! defined $config_file ) {
     if ( -f 'filesys-db.yaml' ) {
+    #if ( -f '/var/run/user/1000/gvfs/smb-share:server=aliens.local,share=corion/bin/Filesys-DB/filesys-db.yaml' ) {
         $config_file = 'filesys-db.yaml';
+        #$config_file = '/var/run/user/1000/gvfs/smb-share:server=aliens.local,share=corion/bin/Filesys-DB/filesys-db.yaml';
     } else {
         $user_config = {
             mountpoints => [
@@ -60,6 +62,9 @@ my $store = Filesys::DB->new(
     mountpoints => {
         %{ $config->{mountpoints} },
         maybe $mount_alias => $mountpoint,
+    },
+    dbh => {
+        #dsn => 'dbi:SQLite:dbname=/var/run/user/1000/gvfs/smb-share:server=aliens.local,share=corion/bin/Filesys-DB/db/filesys-db.sqlite',
     },
 );
 
