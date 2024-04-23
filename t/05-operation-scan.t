@@ -137,13 +137,14 @@ $fs_info->{stat}->[9] = time(); # Update the mtime field
 is $op->_wants_rescan( $info, { context => $fs_info } ), 1, "An mtime means we will rescan"
     or diag Dumper $info;
 
-# XXX set up scan access counter
 my %properties_read;
 
 $op->do_scan(
     directories => [$tempdir],
+    status => sub( $action, $filename ) {
+        $properties_read{ $filename }->{ $action }++
+    },
 );
 
 is $properties_read{ $filename }->{ sha256 }, undef, "We didn't recompute the sha256 for $filename";
-
 done_testing();
