@@ -85,6 +85,8 @@ sub _mime_match( $pattern, $type ) {
     return $type =~ qr!\A$p\z!
 }
 
+use constant EXISTS_BUT_EMPTY => "\0undefined";
+
 # This does a recursive descent to find whether rules apply or not
 sub _applicable_properties( $props, $info, $options, $visual='???' ) {
     state %path_cache;
@@ -187,10 +189,10 @@ sub extract_content_via_tika( $self, $info ) {
             # Shouldn't this be ->{content}->{language} ?!
             $changed += changed( \($info->{language}), $lang);
         #}
-        $changed += changed( \($info->{content}->{title}), $pdf_info->meta->{'dc:title'});
-        $changed += changed( \($info->{content}->{creator}), $pdf_info->meta->{'dc:creator'});
-        $changed += changed( \($info->{content}->{company}), $pdf_info->meta->{'pdf:docinfo:custom:Company'});
-        $changed += changed( \($info->{content}->{html}), $pdf_info->content());
+        $changed += changed( \($info->{content}->{title}), $pdf_info->meta->{'dc:title'} // EXISTS_BUT_EMPTY );
+        $changed += changed( \($info->{content}->{creator}), $pdf_info->meta->{'dc:creator'} // EXISTS_BUT_EMPTY );
+        $changed += changed( \($info->{content}->{company}), $pdf_info->meta->{'pdf:docinfo:custom:Company'} // EXISTS_BUT_EMPTY );
+        $changed += changed( \($info->{content}->{html}), $pdf_info->content() // EXISTS_BUT_EMPTY );
 
         return $changed;
     } else {
@@ -226,10 +228,10 @@ sub extract_content_from_markdown( $self, $info ) {
     );
     my $frontmatter = $tfm->frontmatter_hashref;
     my $changed = 0;
-    $changed += changed( \($info->{content}->{title}),   $frontmatter->{'title'});
-    $changed += changed( \($info->{content}->{creator}), $frontmatter->{'author'});
+    $changed += changed( \($info->{content}->{title}),   $frontmatter->{'title'} // EXISTS_BUT_EMPTY );
+    $changed += changed( \($info->{content}->{creator}), $frontmatter->{'author'} // EXISTS_BUT_EMPTY );
     $changed += changed( \($info->{language}), $frontmatter->{'language'});
-    $changed += changed( \($info->{content}->{html}),    $tfm->data_text());
+    $changed += changed( \($info->{content}->{html}),    $tfm->data_text() // EXISTS_BUT_EMPTY );
 
     return $changed
 }

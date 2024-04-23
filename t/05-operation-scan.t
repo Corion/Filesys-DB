@@ -79,7 +79,7 @@ ok exists $info3->{ content }, "We have a content tree now"
     or diag Dumper $info3;
 ok exists $info3->{ content }->{ creator }, "We have a content.creator now"
     or diag Dumper $info3;
-is $info3->{ content }->{ creator }, undef, "... but content.creator is undef"
+is $info3->{ content }->{ creator }, Filesys::DB::Operation::EXISTS_BUT_EMPTY, "... and it is our 'exists but empty' marker"
     or diag Dumper $info3;
 
 my @props3 = map { $_->[0] }
