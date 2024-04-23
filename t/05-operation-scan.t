@@ -125,6 +125,18 @@ $info = $op->basic_direntry_info( "$tempdir/f1", "$tempdir/f1", { stat => [stat(
 is $op->_wants_rescan( $info, {} ), undef, "We don't want to rescan $info->{filename}"
     or diag Dumper $info;
 
+my $fs_info = { stat => [stat("$tempdir/f1")] };
+$info = $op->basic_direntry_info( "$tempdir/f1", "$tempdir/f1", $fs_info, { entry_type => 'file' } );
+$fs_info->{stat}->[7] = 10; # set the filesize
+is $op->_wants_rescan( $info, { context => $fs_info } ), 1, "A filesize change means we will rescan"
+    or diag Dumper $info;
+
+$fs_info = { stat => [stat("$tempdir/f1")] };
+$info = $op->basic_direntry_info( "$tempdir/f1", "$tempdir/f1", $fs_info, { entry_type => 'file' } );
+$fs_info->{stat}->[9] = time(); # Update the mtime field
+is $op->_wants_rescan( $info, { context => $fs_info } ), 1, "An mtime means we will rescan"
+    or diag Dumper $info;
+
 # XXX set up scan access counter
 my %properties_read;
 

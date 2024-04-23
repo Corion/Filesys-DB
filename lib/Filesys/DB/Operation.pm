@@ -305,13 +305,13 @@ sub _wants_rescan( $self, $info, $options ) {
             #$self->msg->("rescan,no_info,$info->{filename}");
             $do_scan = 1
         } else {
+            # Check last change timestamp of the file
+            # and filesize. If either changed, we should rescan
             if(     $options->{ context }->{stat}
                 and $options->{ context }->{stat}->@* ) {
                 my $ts = timestamp($options->{ context }->{stat}->[9]);
-                $do_scan = $ts gt $options->{ last_ts };
-
-                # XXX also check the file size for equality. These two combined
-                #     should be a good-enough indicator for a full rescan
+                $do_scan = $ts gt $options->{ last_ts }
+                         || $options->{ context }->{stat}->[7] != $info->{ filesize };
 
                 #if( $do_scan ) {
                 #    $self->msg->("rescan,modified ($last_ts / $ts),$info->{filename}");
