@@ -33,7 +33,7 @@ my $store = Filesys::DB->new(
 my $op = Filesys::DB::Operation->new(
     store => $store,
     status => sub($action,$location) {
-        note( sprintf "% 8s | %s", $action, $location );
+        note( sprintf "% 10s | %s", $action, $location );
     },
     msg => sub($str) {
         diag( sprintf "%s", $str );
