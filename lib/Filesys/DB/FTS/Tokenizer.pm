@@ -19,8 +19,10 @@ our $thesaurus;
 
 require bytes; # we need to look at byte counts of UTF-8 encoded strings
 
-sub get_stemmer( $language ) {
+sub get_stemmer( $_language ) {
+    my $language = $_language =~ s/_\w+//r;
     if( not defined $language
+        or $language eq ''
         or $language =~ /^(et|el|fi)$/ # unsupported languages...
       ) {
         # no stemmer
