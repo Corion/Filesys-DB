@@ -66,7 +66,7 @@ if( $mount_alias && !@ARGV ) {
         or die "Unknown mount point '$mount_alias'";
     push @ARGV, $store->mountpoints->{$mount_alias}->{directory}
 } elsif( $scan_all_mountpoints ) {
-    push @ARGV, map { $store->mountpoints->{ $_ }->{directory}} sort keys %{$store->mountpoints}
+    push @ARGV, map { $store->mountpoints->{ $_ }->{directory}->native } sort keys %{$store->mountpoints}
 }
 
 # We want a breadth-first FS scan, preferring the most recent entries
