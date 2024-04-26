@@ -452,27 +452,21 @@ sub do_scan( $self, %options ) {
                     # before scanning and creating their contents
 
                     # XXX how can we cache the parent here in a sensible manner?!
-                    state $last_parent;
-                    state $parent_info;
-                    if( $last_parent // '' ne $context->{parent} ) {
-                        # Do a LRU cache, better than nothing
-                        $last_parent = $context->{parent};
-                        $parent_info = $store->find_direntry_by_filename( $last_parent );
-                    };
-                    my $parent = $parent_info;
+                    #     this will run out of memory over time
+                    state %parent;
+                    $parent{ $context->{parent} }
+                        //= $store->find_direntry_by_filename( $context->{parent} );
+                    my $parent = $parent{ $context->{parent} };
 
-                    state $collection;
-                    # We could know this from above, when $parent changes already!
-                    if( ! $collection or $collection->{parent_id} != $parent->{entry_id}) {
-                        $collection = $store->insert_or_update_collection({
-                            parent_id => $parent->{entry_id},
-                            collection_type => 'directory',
-                            title => $parent->{title} // basename($parent->{filename}->value),
-                        });
-                    };
+                    state %collection;
+                    $collection{ $parent } //= $store->insert_or_update_collection({
+                        parent_id => $parent->{entry_id},
+                        collection_type => 'directory',
+                        title => $parent->{title} // basename($parent->{filename}->value),
+                    });
 
                     my $membership = $store->insert_or_update_membership({
-                        collection_id => $collection->{collection_id},
+                        collection_id => $collection{ $parent }->{collection_id},
                         entry_id => $info->{entry_id},
                         position => undef,
                     });
