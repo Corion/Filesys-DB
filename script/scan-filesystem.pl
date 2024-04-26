@@ -165,7 +165,7 @@ my $op = Filesys::DB::Operation->new(
     store => $store,
     dry_run => $dry_run,
     status => sub($action,$location) {
-        status( sprintf "% 8s | %s", $action, $location );
+        status( sprintf "% 10s | %s", $action, $location );
     },
     msg => sub($str) {
         msg( sprintf "%s", $str );
@@ -179,7 +179,7 @@ if( $action eq 'scan') {
 
 } elsif ($action eq 'watch' ) {
     my $watcher = Filesys::DB::Watcher->new(store => $store);
-    status( sprintf "% 8s | %s", 'idle', "");
+    status( sprintf "% 10s | %s", 'idle', "");
     # Can we / do we want to debounce this? While a file is copied, we will
     # also start to scan it, which is not great. But waiting a second for things to
     # settle down also means some async behaviour, which isn't great either
@@ -221,7 +221,7 @@ if( $action eq 'scan') {
             $info->{filename} = $ev->{new_name};
             $info = $op->update_properties( $info, force => 1 );
         }
-        status( sprintf "% 8s | %s", 'idle', "");
+        status( sprintf "% 10s | %s", 'idle', "");
     });
 }
 
