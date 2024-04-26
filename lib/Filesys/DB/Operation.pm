@@ -450,13 +450,27 @@ sub do_scan( $self, %options ) {
                 if( defined $context->{parent}) {
                     # This should always exist since we scan and create directories
                     # before scanning and creating their contents
-                    my $parent = $store->find_direntry_by_filename( $context->{parent});
 
-                    my $collection = $store->insert_or_update_collection({
-                        parent_id => $parent->{entry_id},
-                        collection_type => 'directory',
-                        title => $parent->{title} // basename($parent->{filename}->value),
-                    });
+                    # XXX how can we cache the parent here in a sensible manner?!
+                    state $last_parent;
+                    state $parent_info;
+                    if( $last_parent // '' ne $context->{parent} ) {
+                        # Do a LRU cache, better than nothing
+                        $last_parent = $context->{parent};
+                        $parent_info = $store->find_direntry_by_filename( $last_parent );
+                    };
+                    my $parent = $parent_info;
+
+                    state $collection;
+                    # We could know this from above, when $parent changes already!
+                    if( ! $collection or $collection->{parent_id} != $parent->{entry_id}) {
+                        $collection = $store->insert_or_update_collection({
+                            parent_id => $parent->{entry_id},
+                            collection_type => 'directory',
+                            title => $parent->{title} // basename($parent->{filename}->value),
+                        });
+                    };
+
                     my $membership = $store->insert_or_update_membership({
                         collection_id => $collection->{collection_id},
                         entry_id => $info->{entry_id},
