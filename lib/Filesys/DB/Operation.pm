@@ -55,7 +55,8 @@ sub audio_info( $audiofile, $artist=undef, $album=undef ) {
     $tag->get_tag;
 
     # Mush 03/10 into 03
-    if( $tag->track =~ m!(\d+)\s*/\s*\d+$! ) {
+    my $tr = $tag->track;
+    if( $tr and $tr =~ m!(\d+)\s*/\s*\d+$! ) {
         $tag->track( $1 );
     };
 
@@ -67,7 +68,9 @@ sub audio_info( $audiofile, $artist=undef, $album=undef ) {
     $info{ url } = basename( $audiofile ); # we assume the playlist will live in the same directory
     $info{ artist } //= $artist;
     $info{ album  } //= $album;
-    $info{ track  } = sprintf '%02d', $info{ track };
+    if( defined $info{ track } ) {
+        $info{ track  } = sprintf '%02d', $info{ track };
+    };
 
     if( my $tag = $tag->plugin('MP3') ) {
         if( my $mp3 = $tag->{ID3v2} ) {
