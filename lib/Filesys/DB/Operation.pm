@@ -421,8 +421,8 @@ sub do_scan( $self, %options ) {
     my $dry_run = exists $options{ dry_run }
                   ? delete $options{ dry_run }
                   : $self->dry_run;
-    my $status = $self->status;
-    my $msg    = $self->msg;
+    my $status = $options{ status } // $self->status;
+    my $msg    = $options{ msg }    // $self->msg;
 
     weaken(my $s = $self);
 
