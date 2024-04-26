@@ -226,15 +226,18 @@ sub extract_content_from_markdown( $self, $info ) {
         local (@ARGV, $/) = $info->{filename}->native;
         <>
     };
-    my $tfm = Text::FrontMatter::YAML->new(
-        document_string => $content
-    );
-    my $frontmatter = $tfm->frontmatter_hashref;
+
     my $changed = 0;
-    $changed += changed( \($info->{content}->{title}),   $frontmatter->{'title'} // EXISTS_BUT_EMPTY );
-    $changed += changed( \($info->{content}->{creator}), $frontmatter->{'author'} // EXISTS_BUT_EMPTY );
-    $changed += changed( \($info->{language}), $frontmatter->{'language'});
-    $changed += changed( \($info->{content}->{html}),    $tfm->data_text() // EXISTS_BUT_EMPTY );
+    eval {
+        my $tfm = Text::FrontMatter::YAML->new(
+            document_string => $content
+        );
+        my $frontmatter = $tfm->frontmatter_hashref;
+        $changed += changed( \($info->{content}->{title}),   $frontmatter->{'title'} // EXISTS_BUT_EMPTY );
+        $changed += changed( \($info->{content}->{creator}), $frontmatter->{'author'} // EXISTS_BUT_EMPTY );
+        $changed += changed( \($info->{language}), $frontmatter->{'language'} );
+        $changed += changed( \($info->{content}->{html}),    $tfm->data_text() // EXISTS_BUT_EMPTY );
+    };
 
     return $changed
 }
