@@ -49,7 +49,8 @@ sub watch_changenotify( $self, %options ) {
     }
 }
 
-sub watch( $self, %options ) {
+sub watch {
+    #my ( $self, %options ) = %options;
     goto &watch_win32 if($^O eq 'MSWin32');
     goto &watch_changenotify;
 }
