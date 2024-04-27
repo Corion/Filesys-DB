@@ -66,7 +66,7 @@ my @generators = (
             select entry_id
                 , json_extract(fs.entry_json, '$.content.creator') as collection_title
             from filesystem_entry fs
-            where collection_title is not null
+            where collection_title is not null and collection_title != ''
 SQL
     },
 
@@ -78,7 +78,7 @@ SQL
                 select entry_id
                     , json_extract(fs.entry_json, '$.language') as collection_title
                 from filesystem_entry fs
-                where collection_title is not null
+                where collection_title is not null and collection_title != ''
 SQL
     },
 );
@@ -101,16 +101,16 @@ my $collections_sizes = $store->selectall_named(<<'SQL');
       from filesystem_collection c
       join filesystem_membership m using (collection_id)
   group by c.title, c.collection_id, c.generator_id
-  order by c.collection_id
+  order by c.title
 SQL
 
 note "Launching filter tests";
 
 my $expected = [
-    { title => 'Corion',   count => 2, generator_id => 'test_creators' },
     { title => 'A.U.Thor', count => 1, generator_id => 'test_creators' },
-    { title => 'en',       count => 3, generator_id => 'test_languages' },
+    { title => 'Corion',   count => 2, generator_id => 'test_creators' },
     { title => 'de',       count => 1, generator_id => 'test_languages' },
+    { title => 'en',       count => 3, generator_id => 'test_languages' },
 ];
 
 is $collections_sizes, $expected, "A first round creates the expected collections";
@@ -146,16 +146,16 @@ $collections_sizes = $store->selectall_named(<<'SQL');
       from filesystem_collection c
       join filesystem_membership m using (collection_id)
   group by c.title, c.collection_id, c.generator_id
-  order by c.collection_id
+  order by c.title
 SQL
 
 note "Launching filter tests";
 
 $expected = [
-    { title => 'Corion',   count => 2, generator_id => 'test_creators' },
     { title => 'A.U.Thor', count => 2, generator_id => 'test_creators' },
-    { title => 'en',       count => 4, generator_id => 'test_languages' },
+    { title => 'Corion',   count => 2, generator_id => 'test_creators' },
     { title => 'de',       count => 1, generator_id => 'test_languages' },
+    { title => 'en',       count => 4, generator_id => 'test_languages' },
 ];
 
 is $collections_sizes, $expected, "Adding a file creates the expected collections";
