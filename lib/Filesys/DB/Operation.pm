@@ -316,8 +316,10 @@ sub _wants_rescan( $self, $info, $options ) {
             if(     $options->{ context }->{stat}
                 and $options->{ context }->{stat}->@* ) {
                 my $ts = timestamp($options->{ context }->{stat}->[9]);
-                $do_scan = $ts gt $options->{ last_ts }
-                         || $options->{ context }->{stat}->[7] != $info->{ filesize };
+                $do_scan =  $ts gt $options->{ last_ts }
+                         || ! defined $info->{ filesize }
+                         || $options->{ context }->{stat}->[7] != $info->{ filesize }
+                         ;
 
                 #if( $do_scan ) {
                 #    $self->msg->("rescan,modified ($last_ts / $ts),$info->{filename}");
