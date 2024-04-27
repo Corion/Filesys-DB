@@ -425,6 +425,19 @@ SQL
     return $res
 }
 
+sub find_memberships_by_parent( $self, $collection_type, $_parent_id ) {
+    my $parent_id = \$_parent_id;
+    my $res = $self->selectall_named(<<'SQL', $collection_type, $parent_id );
+      select c.collection_id
+           , m.entry_id
+        from filesystem_membership m
+        join filesystem_collection c on m.collection_id = c.collection_id
+        where c.collection_type = :collection_type
+          and parent_id          = :parent_id
+SQL
+    return $res
+}
+
 sub insert_or_update_collection( $self, $info ) {
     my $value = encode_json( $info );
     my $collection_id = $info->{collection_id};

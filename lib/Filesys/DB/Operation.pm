@@ -467,7 +467,19 @@ sub do_scan( $self, %options ) {
                         title => $parent->{title} // basename($parent->{filename}->value),
                     });
 
-                    my $membership = $store->insert_or_update_membership({
+                    state %memberships;
+                    #state $last_parent;
+                    #$last_parent //= $parent->{entry_id};
+                    #if( $last_parent != $parent->{entry_id} ) {
+                    if( ! $memberships{ $parent->{entry_id}} ) {
+                        say "Reloading";
+                        $memberships{ $parent->{entry_id}}
+                         = +{ map { $_->{entry_id} => 1 }
+                                  $store->find_memberships_by_parent( 'directory', $parent->{entry_id} )->@*
+                            };
+                        #use Data::Dumper; warn Dumper \%memberships;
+                    };
+                    my $membership = $memberships{ $parent->{entry_id} }->{ entry_id } // $store->insert_or_update_membership({
                         collection_id => $collection{ $parent }->{collection_id},
                         entry_id => $info->{entry_id},
                         position => undef,
