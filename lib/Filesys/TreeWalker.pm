@@ -15,6 +15,8 @@ Filesys::TreeWalker - walk a directory tree breadth first, newest entries first
 
 =head1 SYNOPSIS
 
+  use 5.020;
+  use experimental 'signatures';
   use Filesys::TreeWalker 'scan_tree_bf';
 
   scan_tree_bf(
@@ -149,6 +151,7 @@ sub scan_tree_bf( %options ) {
 
         } else {
             warn "$entry->{type}: <<$entry->{name}>>";
+            use Data::Dumper; warn Dumper $entry;
             # we skip stuff that is neither a file nor a directory
         }
     }
