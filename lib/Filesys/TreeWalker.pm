@@ -59,8 +59,8 @@ sub is_win32_reparse($fn) {
 
   scan_tree_bf(
       queue     => '/some/root/dir',
-      file      => sub( $name, $context ) { say "$name: size is " . $context->{stat}->[7] },
-      directory => sub( $name, $context ) { 1 },
+      file      => sub( $name, $context, $queue ) { say "$name: size is " . $context->{stat}->[7] },
+      directory => sub( $name, $context, $queue ) { 1 },
       wanted    => sub( $dir, $context ) { $dir !~ /\.git$/i }
   );
 
@@ -98,7 +98,7 @@ it should be scanned or not.
 # We currently expect entries from a filesystem, not ftp/webdav/ssh yet
 sub scan_tree_bf( %options ) {
     my $on_file      = delete $options{ file } // sub {};
-    my $on_directory = delete $options{ directory } // sub {};
+    my $on_directory = delete $options{ directory } // sub { 1 };
     my $wanted       = delete $options{ wanted } // sub { 1 };
     my $queue        = delete $options{ queue } // ['.'];
 
@@ -116,7 +116,7 @@ sub scan_tree_bf( %options ) {
         my $entry = shift @$queue;
 
         if( $entry->{type} eq 'directory' ) {
-            if( ! $on_directory->($entry->{name}, $entry)) {
+            if( ! $on_directory->($entry->{name}, $entry, $queue)) {
                 # we are actually not interested in this directory
                 next;
             };
@@ -147,7 +147,7 @@ sub scan_tree_bf( %options ) {
             @$queue = sort { $b->{stat}->[9] <=> $a->{stat}->[9] } @$queue, @entries;
 
         } elsif( $entry->{type} eq 'file' ) {
-            $on_file->($entry->{name}, $entry);
+            $on_file->($entry->{name}, $entry, $queue);
 
         } else {
             warn "$entry->{type}: <<$entry->{name}>>";

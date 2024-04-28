@@ -440,7 +440,7 @@ sub do_scan( $self, %options ) {
     scan_tree_bf(
         wanted => sub($name) { $s->keep_fs_entry($name ) },
         queue => $directories,
-        file => sub($file,$context) {
+        file => sub($file,$context,$queue) {
             #perl -Ilib t/04
 
             my $info = $store->find_direntry_by_filename( $file );
@@ -490,7 +490,7 @@ sub do_scan( $self, %options ) {
             }
 
         },
-        directory => sub( $directory, $context ) {
+        directory => sub( $directory, $context, $queue ) {
             my $info = $store->find_direntry_by_filename( $directory );
             if( ! $info ) {
                 my $fullname = File::Spec->rel2abs($directory, $context->{parent});
@@ -500,7 +500,7 @@ sub do_scan( $self, %options ) {
                 );
             };
 
-            $status->( 'scan', $directory );
+            $status->( 'scan', $directory, $context, $queue );
             return 1
         },
     );

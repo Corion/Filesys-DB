@@ -114,7 +114,7 @@ sub do_rescan( $op, @sql ) {
     my %rescan_parents;
 
     scan_tree_db(
-        file => sub( $info, $context ) {
+        file => sub( $info, $context, $queue ) {
             # do a liveness check? and potentially delete the file entry
             # also, have a dry-run option, just listing the files out of date?!
             if( ! -e $info->{filename}->native) {
@@ -141,7 +141,7 @@ sub do_rescan( $op, @sql ) {
                 $info = $op->update_properties( $info, force => 1, context => $context );
             }
         },
-        directory => sub( $info, $context ) {
+        directory => sub( $info, $context, $queue ) {
             if( ! -e $info->{filename}->native) {
                 do_delete($op, { filename => $info->{filename}});
             };
@@ -164,8 +164,9 @@ sub do_rescan( $op, @sql ) {
 my $op = Filesys::DB::Operation->new(
     store => $store,
     dry_run => $dry_run,
-    status => sub($action,$location) {
-        status( sprintf "% 10s | %s", $action, $location );
+    status => sub($action,$location, $context, $queue) {
+        my $date = strftime '%Y-%m-%d', gmtime( $context->{stat}->[9] );
+        status( sprintf "% 10s | %s | % 6d | %s", $action, $date, scalar( @$queue ), $location );
     },
     msg => sub($str) {
         msg( sprintf "%s", $str );
