@@ -428,6 +428,12 @@ sub do_scan( $self, %options ) {
 
     weaken(my $s = $self);
 
+    # XXX do we really want to load all of this into memory?!
+    state %collection;
+    %collection = map {
+        $_->{parent_id} => $_
+    } $store->all_collections( 'directory' )->@*;
+
     # Maybe we want to preseed with DB results so that we get unscanned directories
     # first, or empty directories ?!
     scan_tree_bf(
@@ -456,31 +462,26 @@ sub do_scan( $self, %options ) {
                     # XXX how can we cache the parent here in a sensible manner?!
                     #     this will run out of memory over time
                     state %parent;
-                    $parent{ $context->{parent} }
-                        //= $store->find_direntry_by_filename( $context->{parent} );
-                    my $parent = $parent{ $context->{parent} };
+                    my $fn = ref $context->{parent} ? $context->{parent}->native : $context->{parent};
+                    $parent{ $fn }
+                        //= $store->find_direntry_by_filename( $fn );
+                    my $parent = $parent{ $fn };
 
-                    state %collection;
-                    $collection{ $parent } //= $store->insert_or_update_collection({
+                    $collection{ $parent->{entry_id} } //= $store->insert_or_update_collection({
                         parent_id => $parent->{entry_id},
                         collection_type => 'directory',
                         title => $parent->{title} // basename($parent->{filename}->value),
                     });
 
                     state %memberships;
-                    #state $last_parent;
-                    #$last_parent //= $parent->{entry_id};
-                    #if( $last_parent != $parent->{entry_id} ) {
                     if( ! $memberships{ $parent->{entry_id}} ) {
-                        say "Reloading";
                         $memberships{ $parent->{entry_id}}
-                         = +{ map { $_->{entry_id} => 1 }
+                         = +{ map { $_->{entry_id} => $_ }
                                   $store->find_memberships_by_parent( 'directory', $parent->{entry_id} )->@*
                             };
-                        #use Data::Dumper; warn Dumper \%memberships;
                     };
-                    my $membership = $memberships{ $parent->{entry_id} }->{ entry_id } // $store->insert_or_update_membership({
-                        collection_id => $collection{ $parent }->{collection_id},
+                    my $membership = $memberships{ $parent->{entry_id} }->{ $info->{ entry_id }} // $store->insert_or_update_membership({
+                        collection_id => $collection{ $parent->{entry_id} }->{collection_id},
                         entry_id => $info->{entry_id},
                         position => undef,
                     });
@@ -512,6 +513,8 @@ sub do_update( $self, $info, %options ) {
         $self->msg->( sprintf "update,%s", $info->{filename}->value );
         return $info;
     } else {
+        # Do we really want to update a directory even if nothing changed?
+        # we might want to update last visited, but that should be optional...
         $info = $self->store->insert_or_update_direntry($info);
         return $info
     }
@@ -605,6 +608,7 @@ sub maintain_collections( $self, %options ) {
             if( ! $exists->@* ) {
                 # create the collection
                 $self->msg->(sprintf "%s: Creating %s '%s'", $generator_id, $name, $collection_title);
+                warn "->insert_or_update_collection";
                 $collections{ $collection_title } = $store->insert_or_update_collection({
                     generator_id => $generator_id,
                     title => $collection_title,
@@ -623,6 +627,7 @@ sub maintain_collections( $self, %options ) {
         # XXX Wipe existing membership, if it is different
 
         # Create new membership
+                warn "->insert_or_update_membership";
         $store->insert_or_update_membership({
             collection_id => $collections{ $collection_title }->{collection_id},
             entry_id => 0+$rel->{entry_id},
