@@ -477,6 +477,15 @@ SQL
     return $res->[0]
 }
 
+sub all_collections( $self, $collection_type ) {
+    my $res = $self->selectall_named(<<'SQL', $collection_type );
+      select *
+        from filesystem_collection
+        where collection_type = :collection_type
+SQL
+    return [ map { $self->_inflate_collection( $_ )} $res->@* ]
+}
+
 sub insert_or_update_membership( $self, $info ) {
     my $value = encode_json( $info );
     croak "Need a collection" unless $info->{collection_id};
