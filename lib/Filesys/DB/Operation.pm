@@ -372,6 +372,7 @@ sub update_properties( $self, $info, %options ) {
     # If we changed anything, update the database:
     if( ! $last_ts or ($info->{last_scanned} // '' ) ne $last_ts ) {
         #msg( sprintf "% 8s | %s", 'update', $info->{filename}->value);
+        no warnings 'once';
         local $Filesys::DB::FTS::Tokenizer::tokenizer_language = $info->{language};
 
         $info = $self->do_update($info);
