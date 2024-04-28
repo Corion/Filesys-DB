@@ -358,7 +358,8 @@ sub update_properties( $self, $info, %options ) {
             } else {
                 # Just so we always have a last_scanned entry:
                 $info->{last_scanned} //= timestamp;
-                $status->( $vis, $info->{filename}->value );
+                # XXX Dummy values in the callback
+                $status->( $vis, $info->{filename}->value, {}, [] );
                 if( $cb->($self, $info)) {
                     $info->{last_scanned} = timestamp;
                     $do_scan = 1;
