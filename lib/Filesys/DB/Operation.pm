@@ -608,7 +608,6 @@ sub maintain_collections( $self, %options ) {
             if( ! $exists->@* ) {
                 # create the collection
                 $self->msg->(sprintf "%s: Creating %s '%s'", $generator_id, $name, $collection_title);
-                warn "->insert_or_update_collection";
                 $collections{ $collection_title } = $store->insert_or_update_collection({
                     generator_id => $generator_id,
                     title => $collection_title,
