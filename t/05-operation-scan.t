@@ -32,7 +32,7 @@ my $store = Filesys::DB->new(
 
 my $op = Filesys::DB::Operation->new(
     store => $store,
-    status => sub($action,$location) {
+    status => sub($action,$location, $context, $queue) {
         note( sprintf "% 10s | %s", $action, $location );
     },
     msg => sub($str) {
@@ -40,10 +40,12 @@ my $op = Filesys::DB::Operation->new(
     },
 );
 
+note "Scanning (test) filesystem";
 $op->do_scan(
     directories => [$tempdir],
     force => 1,
 );
+note "Inspecting database";
 
 my $documents = $store->selectall_named(<<'');
     select entry_type
@@ -122,8 +124,15 @@ is $collections, [{
 # ... and we already have all potential properties
 
 $info = $op->basic_direntry_info( "$tempdir/f1", "$tempdir/f1", { stat => [stat("$tempdir/f1")] }, { entry_type => 'file' } );
-is $op->_wants_rescan( $info, {} ), undef, "We don't want to rescan $info->{filename}"
-    or diag Dumper $info;
+my ($rescan, $reason) = $op->_wants_rescan( $info, {} );
+is $rescan, 1, "We want to rescan $info->{filename} if it was never scanned"
+    or do { diag "Reason: $reason"; diag Dumper $info };
+
+use Data::Dumper; diag Dumper $info;
+$info = $op->update_properties( $info );
+($rescan, $reason) = $op->_wants_rescan( $info, {} );
+is $rescan, undef, "We don't want to rescan $info->{filename}"
+    or do { diag "Reason: $reason"; diag Dumper $info };
 
 my $fs_info = { stat => [stat("$tempdir/f1")] };
 $info = $op->basic_direntry_info( "$tempdir/f1", "$tempdir/f1", $fs_info, { entry_type => 'file' } );
@@ -141,7 +150,7 @@ my %properties_read;
 
 $op->do_scan(
     directories => [$tempdir],
-    status => sub( $action, $filename ) {
+    status => sub($action,$location, $context, $queue) {
         $properties_read{ $filename }->{ $action }++
     },
 );
