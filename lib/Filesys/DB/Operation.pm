@@ -22,6 +22,7 @@ use lib '../Apache-Tika-Async/lib';
 use Apache::Tika::Server;
 use POSIX 'strftime';
 use Encode 'encode', 'decode';
+use Filesys::Filename;
 
 use Text::FrontMatter::YAML;
 
@@ -245,7 +246,11 @@ sub extract_content_from_markdown( $self, $info ) {
 our %file_properties = (
     # '$.content.text' ?
     '$.mountpoint' => sub( $self, $info ) {
-        $info->{mountpoint} = $self->store->get_mountpoint_alias( $info->{filename});
+        # Only update if we have an absolute filename and no mountpoint?!
+        if( $info->{filename}->value =~ m!/!
+            and ! $info->{mountpoint} ) {
+            $info->{mountpoint} = $self->store->get_mountpoint_alias( $info->{filename});
+        };
         0
     },
     '$.sha256' => sub( $self, $info ) {
