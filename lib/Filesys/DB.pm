@@ -506,7 +506,11 @@ sub _inflate_filename( $self, $mountpoint, $filename ) {
     croak "Unknown mountpoint '$mountpoint'"
         unless $mp;
 
-    $filename = decode( 'UTF-8', $filename );
+    if( ref $filename ) {
+        $filename = $filename->value;
+    } else {
+        $filename = decode( 'UTF-8', $filename );
+    }
 
     $filename = join "/", $mp->{directory}->value, $filename;
     return Filesys::Filename->new( value => $filename, encoding => $mp->{encoding} )
