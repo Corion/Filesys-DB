@@ -309,36 +309,60 @@ our %file_properties = (
 sub _wants_rescan( $self, $info, $options ) {
     return 1 if $options->{force};
 
-    my $do_scan;
-    if( exists $options->{ context }) {
-        if( ! $info->{last_scanned} ) {
-            # This should be guarded by a verbosity/log level thing...
-            #$self->msg->("rescan,no_info,$info->{filename}");
-            $do_scan = 1
+    if( ! exists $options->{context}) {
+        $options->{context} = {};
+    };
+    if( ! exists $options->{context}->{stat} ) {
+        my $fn;
+        if( $info->{mountpoint}) {
+            $fn = $self->store->_inflate_filename( $info->{mountpoint}, $info->{filename} );
         } else {
-            # Check last change timestamp of the file
-            # and filesize. If either changed, we should rescan
-            if(     $options->{ context }->{stat}
-                and $options->{ context }->{stat}->@* ) {
-                my $ts = timestamp($options->{ context }->{stat}->[9]);
-                $do_scan =  $ts gt $options->{ last_ts }
-                         || ! defined $info->{ filesize }
-                         || $options->{ context }->{stat}->[7] != $info->{ filesize }
-                         ;
-
-                #if( $do_scan ) {
-                #    $self->msg->("rescan,modified ($last_ts / $ts),$info->{filename}");
-                #};
-            } else {
-                # ... we have no stat info, so the file doesn't exist on disk
-                # (or we are doing a rescan from the DB)
-                # So, let's queue a rescan here?!
-                $do_scan = 1;
-            }
+            $fn = $info->{filename};
         };
+        $options->{context}->{stat} = [stat $fn->native];
     };
 
-    return $do_scan;
+    my ($do_scan, $reason);
+    if( ! $info->{last_scanned} ) {
+        # This should be guarded by a verbosity/log level thing...
+        #$self->msg->("rescan,no_info,$info->{filename}");
+        $reason = 'Never scanned';
+        $do_scan = 1;
+
+    } else {
+        # Check last change timestamp of the file
+        # and filesize. If either changed, we should rescan
+        if(     $options->{ context }->{stat}
+            and $options->{ context }->{stat}->@* ) {
+            my $ts = timestamp($options->{ context }->{stat}->[9]);
+            my $last_ts = $options->{ last_ts } // $info->{last_scanned};
+
+            if( $ts gt $last_ts ) {
+                $reason = 'Updated since last scan';
+                $do_scan = 1;
+
+            } elsif( ! defined $info->{ filesize }) {
+                $reason = "We don't know the filesize";
+                $do_scan = 1;
+
+            } elsif( $options->{ context }->{stat}->[7] != $info->{ filesize }) {
+                $reason = "Filesize changed";
+                $do_scan = 1;
+            }
+
+            #if( $do_scan ) {
+            #    $self->msg->("rescan,modified ($last_ts / $ts),$info->{filename}");
+            #};
+        } else {
+            # ... we have no stat info, so the file doesn't exist on disk
+            # (or we are doing a rescan from the DB)
+            # So, let's queue a rescan here?!
+            $reason = 'No stat entry';
+            $do_scan = 1;
+        }
+    }
+
+    return wantarray ? ($do_scan, $reason) : $do_scan;
 }
 
 sub update_properties( $self, $info, %options ) {
