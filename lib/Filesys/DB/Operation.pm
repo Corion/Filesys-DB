@@ -458,7 +458,6 @@ sub do_scan( $self, %options ) {
         wanted => sub($name) { $s->keep_fs_entry($name ) },
         queue => $directories,
         file => sub($file,$context,$queue) {
-            #perl -Ilib t/04
 
             my $info = $store->find_direntry_by_filename( $file );
             if( ! $info) {
