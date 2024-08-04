@@ -347,8 +347,17 @@ sub update_properties( $self, $info, %options ) {
                   ? delete $options{ dry_run }
                   : $self->dry_run;
 
+    if( $info->{filename}->value !~ m!^/! ) {
+        $info->{filename} = $self->store->_inflate_filename( $info->{mountpoint}, $info->{filename} );
+        #warn "Made filename absolute " . $info->{filename}->value;
+    };
+
     # This would be a kind of plugin system, maybe?!
     my $do_scan = $self->_wants_rescan( $info, \%options );
+
+    if( $info->{filename}->value !~ m!^/! ) {
+        croak sprintf "Relative filename encountered: '%s'", $info->{filename}->value;
+    };
 
     # A callback can add more data that we then use to do more scanning
     # for example the mime_type is used subsequently for more scanning
