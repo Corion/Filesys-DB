@@ -392,12 +392,14 @@ sub basic_direntry_info( $self, $ent, $fn, $context={ stat => [stat($fn)] }, $de
                          -d $fn ? 'directory' : undef);
     my $filesize = $defaults->{filesize}
                      // $context->{stat}->[7];
+    $fn = ref $fn ? $fn : Filesys::Filename->from_native( $fn ),
     return {
         entry_type => $entry_type,
         filesize => $filesize,
         %$defaults,
         #filename => $ent,
-        filename => $fn,
+        filename => ref $fn ? $fn : Filesys::Filename->from_native( $fn ),
+        #filename => $fn,
         mtime    => $context->{stat}->[9],
     }
 }
