@@ -87,10 +87,11 @@ sub scan_tree_db( %options ) {
 
 sub scan_entries( %options ) {
     for my $entry (@{$options{entries}}) {
+        # XXX should fill with info from stat(), as usual!
         if( $entry->{entry_type} eq 'file' ) {
-            $options{ file }->( $entry, undef );
+            $options{ file }->( $entry, undef, undef );
         } elsif( $entry->{entry_type} eq 'directory' ) {
-            $options{ directory }->( $entry, undef );
+            $options{ directory }->( $entry, undef, undef );
         }
     }
 }
@@ -138,7 +139,8 @@ sub do_rescan( $op, @sql ) {
                     # basic context
                     $context = Filesys::TreeWalker::_collect_fs_info( $info->{filename} );
                 };
-                $info = $op->update_properties( $info, force => 1, context => $context );
+                #$info = $op->update_properties( $info, force => 1, context => $context );
+                $info = $op->update_properties( $info, context => $context );
             }
         },
         directory => sub( $info, $context, $queue ) {
