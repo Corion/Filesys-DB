@@ -25,6 +25,7 @@ has 'encoding' => (
 
 has 'value' => (
     is => 'ro',
+    required => 1,
 );
 
 sub from_native( $self, $str, $encoding = $default_encoding ) {
