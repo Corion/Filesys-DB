@@ -31,7 +31,7 @@ my $store = Filesys::DB->new(
 
 my $op = Filesys::DB::Operation->new(
     store => $store,
-    status => sub($action,$location) {
+    status => sub($action,$location, $context, $queue) {
         note sprintf "% 8s | %s", $action, $location;
     },
     msg => sub($str) {
