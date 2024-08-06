@@ -83,6 +83,9 @@ sub scan_tree_db( %options ) {
         # wanted has already happened
         # queue does not exist
     )
+
+    # We don't return anything, we simply scan the elements (above)
+    return;
 }
 
 sub scan_entries( %options ) {
