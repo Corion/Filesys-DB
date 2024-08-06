@@ -28,7 +28,7 @@ Filesys::TreeWalker - walk a directory tree breadth first, newest entries first
 
 =cut
 
-sub _collect_fs_info( $fn, $parent=undef ) {
+sub _collect_fs_info( $fn, $parent=undef, $level=0 ) {
     $fn =~ s![/\\]\z!!; # strip off any directory separator as we'll use our own
     my $type = -f $fn ? 'file'
              : -d $fn ? 'directory'
@@ -39,6 +39,7 @@ sub _collect_fs_info( $fn, $parent=undef ) {
         stat   => [stat($fn)],
         parent => $parent,
         name   => $fn,
+        level  => $level,
     }
 }
 
@@ -77,14 +78,25 @@ The root directory to be scanned. If you want multiple directories, pass an arra
 =item B<file>
 
 The callback that is invoked for each file. The callback is passed the full pathname and a context
-hash that contains the L<stat> information and the parent directory name.
+hash. The context hash contains:
+
+  type   - 'file' or 'directory,
+  stat   - information from stat() as arrayref
+  parent - name of the containing directory (if any)
+  name   - full filename (or directory name)
+  level  - level of the entry in the hierarchy
 
 =item B<directory>
 
 The callback that is invoked for each directory. The callback is passed the full pathname and a context
-hash that contains the L<stat> information and the parent directory name.
+hash. The context hash is as above.
 
 The callback must return a true value if the directory should be scanned.
+
+=item B<level>
+
+Level in the filesystem. This would usually be C<0>, but in some cases you
+might want to scan only a subtree of a previously scanned hierarchy.
 
 =item B<wanted>
 
@@ -101,6 +113,7 @@ sub scan_tree_bf( %options ) {
     my $on_directory = delete $options{ directory } // sub { 1 };
     my $wanted       = delete $options{ wanted } // sub { 1 };
     my $queue        = delete $options{ queue } // ['.'];
+    my $level        = delete $options{ level } // 0;
 
     if( $queue and ! ref $queue) {
         $queue = [$queue];
@@ -108,7 +121,7 @@ sub scan_tree_bf( %options ) {
 
     for my $entry (@$queue) {
         if(! ref $entry ) {
-            $entry = _collect_fs_info( $entry );
+            $entry = _collect_fs_info( $entry, $level );
         }
     }
 
@@ -122,6 +135,7 @@ sub scan_tree_bf( %options ) {
             };
 
             my $dn = $entry->{name};
+            my $lv = $entry->{level}+1;
 
             # Resolve junctions on Windows, currently we skip those instead
             #if( is_win32_reparse($dn)) {
@@ -134,7 +148,7 @@ sub scan_tree_bf( %options ) {
             my @entries = map {
                 my $full = "$dn/$_";
 
-                my $info = _collect_fs_info( $full, $dn );
+                my $info = _collect_fs_info( $full, $dn, $lv );
 
                 $info
             } grep {
