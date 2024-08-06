@@ -140,7 +140,6 @@ sub do_rescan( $op, @sql ) {
                     # basic context
                     $context = Filesys::TreeWalker::_collect_fs_info( $info->{filename} );
                 };
-                #$info = $op->update_properties( $info, force => 1, context => $context );
                 $info = $op->update_properties( $info, context => $context );
             }
         },
