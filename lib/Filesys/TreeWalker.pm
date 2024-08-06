@@ -164,7 +164,7 @@ sub scan_tree_bf( %options ) {
             $on_file->($entry->{name}, $entry, $queue);
 
         } else {
-            warn "$entry->{type}: <<$entry->{name}>>";
+            warn "Unknown entry type '$entry->{type}': <<$entry->{name}>>";
             use Data::Dumper; warn Dumper $entry;
             # we skip stuff that is neither a file nor a directory
         }
