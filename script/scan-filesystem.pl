@@ -87,7 +87,10 @@ sub scan_tree_db( %options ) {
 
 sub scan_entries( %options ) {
     for my $entry (@{$options{entries}}) {
-        # XXX should fill with info from stat(), as usual!
+        my $context = Filesys::TreeWalker::_collect_fs_info( $entry->{filename}, undef, $entry->{level} );
+
+        # Make the callbacks match the signature of ::Operation->do_scan callbacks
+        # ( change $entry to $entry->{filename}
         if( $entry->{entry_type} eq 'file' ) {
             $options{ file }->( $entry, undef, undef );
         } elsif( $entry->{entry_type} eq 'directory' ) {
