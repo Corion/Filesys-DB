@@ -34,6 +34,15 @@ has 'dry_run' => (
     is => 'ro',
 );
 
+has 'cutoff' => (
+    is => 'rw',
+    default => sub { 0 },
+);
+
+has 'level' => (
+    is => 'rw',
+);
+
 has 'status' => (
     is => 'ro',
     default => sub { sub {} },
@@ -467,6 +476,8 @@ sub do_scan( $self, %options ) {
                   : $self->dry_run;
     my $status = $options{ status } // $self->status;
     my $msg    = $options{ msg }    // $self->msg;
+    my $cutoff = $options{ cutoff } // $self->cutoff;
+    my $lv     = $options{ level }  // $self->level;
 
     weaken(my $s = $self);
 
@@ -540,8 +551,12 @@ sub do_scan( $self, %options ) {
                 );
             };
 
-            $status->( 'scan', $directory, $context, $queue );
-            return 1
+            if( (defined $lv and $context->{level} < $lv) or $context->{ stat }->[ 9 ]> $cutoff ) {
+                $status->( 'scan', $directory, $context, $queue );
+                return 1;
+            } else {
+                return 0;
+            };
         },
     );
 }

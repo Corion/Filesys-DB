@@ -103,6 +103,7 @@ sub do_delete( $op, $info ) {
 sub do_scan( $op, @directories ) {
     $op->do_scan(
         directories => \@directories,
+        cutoff => time-24*3600*30, # 1 month
         force => $force,
     );
 }
@@ -166,6 +167,7 @@ sub do_rescan( $op, @sql ) {
 my $op = Filesys::DB::Operation->new(
     store => $store,
     dry_run => $dry_run,
+    cutoff  => time-24*3600*30,
     status => sub($action,$location, $context, $queue) {
         my $date = strftime '%Y-%m-%d', gmtime( $context->{stat}->[9] );
         status( sprintf "% 10s | %s | % 6d | %s", $action, $date, scalar( @$queue ), $location );
