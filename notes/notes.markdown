@@ -10,3 +10,11 @@ later: on_change callback to update the DB
 
 Can we / do we want to query YAML files?!
 How/when do we add a full text index, and on what columns?!
+
+# See also
+
+https://ritt.app/
+
+https://www.tagspaces.org/
+
+[File::Sticker](https://metacpan.org/dist/File-Sticker)
