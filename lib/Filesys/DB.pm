@@ -1,7 +1,6 @@
 package Filesys::DB;
 use 5.020;
 use Moo 2;
-#use Filter::signatures;
 use experimental 'signatures';
 
 use DBI ':sql_types';
