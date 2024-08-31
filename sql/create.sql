@@ -56,7 +56,7 @@ create index idx_filesystem_entry_filename_entry_id on filesystem_entry (mountpo
 create table filesystem_relation (
       relation_json      varchar(65520) not null default '{}'
 
-    , relation_id        generated always as (json_extract(relation_json, '$.relation_id'))
+    , relation_id        integer primary key not null
     -- maybe, not everything corresponds to the fs
 
     , child_id  generated always as (json_extract(relation_json, '$.child_id'))
@@ -94,6 +94,7 @@ create unique index idx_filesystem_collection_directory_parent_id on filesystem_
 
 create table filesystem_membership (
       membership_json      varchar(65520) not null default '{}'
+    , membership_id        integer primary key not null
     , collection_id        generated always as (json_extract(membership_json, '$.collection_id'))
     , entry_id             generated always as (json_extract(membership_json, '$.entry_id'))
     , position             generated always as (json_extract(membership_json, '$.position'))
