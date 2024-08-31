@@ -154,6 +154,9 @@ sub bind_named( $self, $sql, $parameters ) {
         if( ! $ok ) {
             croak "$@\nOffending SQL: $sql";
         };
+        if( ! $sth ) {
+            croak "Did not create a DBI handle? $@\nOffending SQL: $sql";
+        };
     };
 
     my $parameter_names = $sth->{ParamValues};
