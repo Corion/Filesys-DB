@@ -49,6 +49,7 @@ create unique index idx_filesystem_entry_entry_id on filesystem_entry (entry_id)
 -- We need this one so we can auto-create new rows for files
 create unique index idx_filesystem_entry_filename on filesystem_entry (mountpoint, filename);
 create index idx_filesystem_entry_filename_entry_id on filesystem_entry (mountpoint, filename, entry_id);
+create index idx_filesystem_entry_last_modified on filesystem_entry (entry_id, mime_type, mtime);
 
 -- See also Audio::Directory
 -- also, tags?!
