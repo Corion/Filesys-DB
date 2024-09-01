@@ -697,4 +697,63 @@ sub maintain_collections( $self, %options ) {
     # a human hand
 }
 
+sub maintain_collection_images( $self, %options ) {
+    # for all "directory" collections without image, if they only contain a
+    # single image, use that image as the representative image of the collection
+
+    my $store        = delete $options{ store } // $self->store;
+
+    my $no_image = $store->execute_named(<<'');
+    with no_image as (
+       select c.collection_id
+         from filesystem_collection c
+        where c.image is null
+          and c.collection_type = 'directory' -- do we need that?!
+    )
+    , single_image as (
+       select c.collection_id as collection_id
+            , count(*) as images
+            , max(e.entry_id) as image
+         from no_image c
+         join filesystem_membership m on c.collection_id = m.collection_id
+         join filesystem_entry e on m.entry_id = e.entry_id
+        where e.mime_type like 'image/%'
+     group by c.collection_id
+       having images = 1
+    )
+    , debug as (
+      select c.collection_id
+           , c.title
+           , e.entry_id
+           , e.filename
+        from filesystem_collection c
+        join single_image si on si.collection_id = c.collection_id
+        join filesystem_entry e on e.entry_id = si.image
+    order by c.collection_id asc
+    )
+    --, debug_json as (
+    --  select c.collection_id
+    --       , c.title
+    --       , e.filename
+    --       , json_set( c.collection_json, '$.image', e.entry_id ) as collection_json
+    --    from filesystem_collection c
+    --    join single_image si on si.collection_id = c.collection_id
+    --    join filesystem_entry e on e.entry_id = si.image
+    --order by c.collection_id asc
+    --)
+    --select * from debug
+    update filesystem_collection
+       set collection_json = json_set( filesystem_collection.collection_json, '$.image', si.image )
+      from (select collection_id, image from single_image) as si
+     where filesystem_collection.image is null
+       and filesystem_collection.collection_id = si.collection_id
+
+    say DBIx::RunSQL->format_results( sth => $no_image );
+}
+
 1;
+
+# Should we have a trigger that removes the image from a collection if the
+# image entry gets deleted?! Or should that also simply be an operation
+# left join filesystem_collection on filesystem_entry where image is not null
+# and e.entry_id is null
