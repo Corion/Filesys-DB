@@ -20,6 +20,8 @@ has [
 );
 
 has 'items' => (
+    is => 'lazy',
+    default => sub { $_[0]->fetch_items( $_[0]->store ) },
 );
 
 has 'store' => (
