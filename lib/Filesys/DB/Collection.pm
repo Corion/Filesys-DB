@@ -20,8 +20,11 @@ has [
 );
 
 has 'items' => (
+);
+
+has 'store' => (
     is => 'ro',
-    default => sub { [] },
+    weak => 1,
 );
 
 sub fetch_items( $self, $store, $id=$self->collection_id ) {
