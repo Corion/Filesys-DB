@@ -82,7 +82,7 @@ sub scan_tree_db( %options ) {
         entries => \@entries,
         # wanted has already happened
         # queue does not exist
-    )
+    );
 
     # We don't return anything, we simply scan the elements (above)
     return;
