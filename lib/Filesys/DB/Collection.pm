@@ -4,6 +4,7 @@ use Moo 2;
 use experimental 'signatures';
 use Filesys::DB;
 use Filesys::DB::Entry;
+use JSON;
 
 has [
          'collection_id'
@@ -58,7 +59,12 @@ SQL
 
 # Yay, n+1 queries ...
 sub fetch_image( $self, $store ) {
-    return Filesys::DB::Entry->from_id( $self->image )
+    my $image = $self->image;
+    if( $image ) {
+        return Filesys::DB::Entry->from_id( $store, $self->image )
+    } else {
+        return
+    }
 }
 
 sub from_id( $class, $store, $id ) {
@@ -68,9 +74,13 @@ sub from_id( $class, $store, $id ) {
           FROM filesystem_collection c
          where c.collection_id = $id
 SQL
-    my $s = $class->new($collection->@*);
-    $s->{items} = $s->fetch_items( $store );
-    return $s
+    return $class->from_row( $store => $collection->[0] );
 }
+
+sub from_row( $class, $store, $row ) {
+    my $payload = decode_json( $row->{collection_json});
+    return $class->new({ collection_id => $row->{collection_id}, store => $store, $payload->%* });
+}
+
 
 1;
