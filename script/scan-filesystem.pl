@@ -37,6 +37,7 @@ GetOptions(
     'all'            => \my $scan_all_mountpoints,
     'watch'          => \my $watch_all_mountpoints,
     'force'          => \my $force,
+    'cutoff'         => \my $cutoff,
 );
 
 my $action = $watch_all_mountpoints ? 'watch'
@@ -44,6 +45,7 @@ my $action = $watch_all_mountpoints ? 'watch'
            : 'scan';
 
 $dsn //= 'dbi:SQLite:dbname=db/filesys-db.sqlite';
+$cutoff //= time-24*3600*30; # 1 month
 
 my $store = Filesys::DB->new(
    dbh => {
@@ -109,7 +111,7 @@ sub do_delete( $op, $info ) {
 sub do_scan( $op, @directories ) {
     $op->do_scan(
         directories => \@directories,
-        cutoff => time-24*3600*30, # 1 month
+        maybe cutoff => $cutoff,
         force => $force,
     );
 }
@@ -172,7 +174,7 @@ sub do_rescan( $op, @sql ) {
 my $op = Filesys::DB::Operation->new(
     store => $store,
     dry_run => $dry_run,
-    cutoff  => time-24*3600*30,
+    maybe cutoff  => $cutoff,
     status => sub($action,$location, $context, $queue) {
         my $date = strftime '%Y-%m-%d', gmtime( $context->{stat}->[9] );
         status( sprintf "% 10s | %s | % 6d | %s", $action, $date, scalar( @$queue ), $location );
