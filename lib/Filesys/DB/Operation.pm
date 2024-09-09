@@ -754,6 +754,7 @@ sub maintain_collection_images( $self, %options ) {
       from (select collection_id, image from single_image) as si
      where filesystem_collection.image is null
        and filesystem_collection.collection_id = si.collection_id
+ returning filesystem_collection.collection_id
 
     say DBIx::RunSQL->format_results( sth => $no_image );
 }
