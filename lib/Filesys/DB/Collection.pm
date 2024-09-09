@@ -34,7 +34,7 @@ sub fetch_items( $self, $store, $id=$self->collection_id ) {
     my $items = $store->selectall_named( <<'SQL', $id );
         select e.entry_id
              , e.entry_json
-             , m.position as position
+             , 0+m.position as position
           FROM filesystem_collection c
           join filesystem_membership m on c.collection_id = m.collection_id
           join filesystem_entry e on m.entry_id=e.entry_id
