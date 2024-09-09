@@ -1,10 +1,12 @@
 #!perl
 use 5.020;
 use Filesys::DB;
+use Filesys::DB::Entry;
 use DBIx::RunSQL;
 use Getopt::Long;
 use YAML 'LoadFile';
 use PerlX::Maybe;
+use Encode 'encode', 'decode';
 
 GetOptions(
     'mountpoint|m=s' => \my $mountpoint,
@@ -38,7 +40,7 @@ if( $config_file ) {
 $user_config->{mountpoints} //= {};
 $config->{mountpoints} = $user_config->{mountpoints};
 
-@columns = map { split /\,/ } @columns;
+@columns = ('entry_id', 'entry_json', 'filename' );
 
 my $store = Filesys::DB->new(
     mountpoints => {
@@ -49,3 +51,17 @@ my $store = Filesys::DB->new(
 
 my $sth = $store->entries( \@columns, $sql );
 
+my @entries = map {
+    Filesys::DB::Entry->from_row( $store, $_ )
+} $sth->fetchall_arrayref( {} )->@*;
+# Check that the files still exist:
+for my $e (@entries) {
+    my $fn_bytes = $e->filename->native;
+    if( ! -e $fn_bytes ) {
+        # The file has gone missing, delete it from the DB
+        say encode('UTF-8', $e->filename->value );
+    } else {
+        # Should we do a rescan here? That's what the --rescan option
+        # in scan-filesystem is for.
+    };
+}
