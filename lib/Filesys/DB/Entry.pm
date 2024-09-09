@@ -28,6 +28,10 @@ has [
     is => 'ro',
 );
 
+sub from_row( $class, $store, $entry ) {
+    return $class->new($store->_inflate_entry( $entry ));
+}
+
 sub from_id( $class, $store, $id ) {
     my $entry = $store->selectall_named( <<'SQL', $id );
         select e.entry_id
@@ -35,7 +39,7 @@ sub from_id( $class, $store, $id ) {
           FROM filesystem_entry e
          where e.entry_id = $id
 SQL
-    $class->new( $store->_inflate_entry( $entry->[0] ));
+    $class->from_row( $store => $entry->[0] );
 }
 
 1;
