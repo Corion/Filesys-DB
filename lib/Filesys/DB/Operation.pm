@@ -70,7 +70,7 @@ sub audio_info( $audiofile, $artist=undef, $album=undef ) {
         $tag->track( $1 );
     };
 
-    my %info = map { $_ => $tag->$_() } qw(artist album track title duration);
+    my %info = map { $_ => $tag->$_() } qw(artist album track title duration year);
     $info{ duration } ||= '-1000'; # "unknown" if we didn't find anything
     $audiofile =~ /\.(\w+)$/;
     $info{ ext } = lc $1;
@@ -82,10 +82,17 @@ sub audio_info( $audiofile, $artist=undef, $album=undef ) {
         $info{ track  } = sprintf '%02d', $info{ track };
     };
 
+    if( defined $info{ year } ) {
+        $info{ year } = sprintf '%04d', $info{ year };
+    };
+
     if( my $tag = $tag->plugin('MP3') ) {
         if( my $mp3 = $tag->{ID3v2} ) {
             if( my $bpm = $mp3->get_frame("TBPM")) {
                 $info{ bpm } = $bpm;
+            }
+            if( my $release = $mp3->get_frame("TDRL")) {
+                $info{ year } = $release;
             }
         }
     }
@@ -221,7 +228,7 @@ sub extract_content_via_audio_tag( $self, $info ) {
     my $changed;
 
     my $audio_info = audio_info( $info->{filename}->native );
-    for( qw(title artist album track duration)) {
+    for( qw(title artist album track duration year date)) {
         if( ! defined $info->{content}->{$_}) {
             $changed += changed( \($info->{content}->{$_}), $audio_info->{$_});
         }
