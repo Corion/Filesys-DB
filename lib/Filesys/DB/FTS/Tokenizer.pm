@@ -2,6 +2,7 @@ package Filesys::DB::FTS::Tokenizer;
 use 5.020;
 use utf8; # does that help?
 use experimental 'signatures';
+use experimental 'try';
 
 our $VERSION = '0.01';
 
@@ -44,11 +45,18 @@ sub get_stemmer( $_language ) {
     } else {
         state $stem //= Lingua::Stem->new();
         $stem->stem_caching({ -level => 2 });
-        $stem->set_locale( $tokenizer_language );
-        return sub( @terms ) {
-            my $stems = $stem->stem( @terms );
-            return @$stems;
-        };
+        try {
+            $stem->set_locale( $tokenizer_language );
+            return sub( @terms ) {
+                my $stems = $stem->stem( @terms );
+                return @$stems;
+            };
+        } catch( $e ) {
+            warn "Tried to find a stemmer for $_language / $language";
+            warn $e;
+            # no stemmer
+            return sub(@terms) { @terms };
+        }
     }
 }
 
