@@ -5,6 +5,7 @@ use experimental 'signatures';
 
 use DBI ':sql_types';
 use DBD::SQLite;
+use DBD::SQLite::Constants ':dbd_sqlite_string_mode';
 
 use PadWalker 'var_name'; # for scope magic...
 use DBIx::RunSQL;
@@ -49,6 +50,7 @@ around BUILDARGS => sub ($orig, $class, @args) {
         PrintError => 0,
         # No - we want raw bytes in and out, as we'll do the en/decoding ourselves
         #sqlite_unicode => 1, #$use_unicode
+        sqlite_string_mode => DBD_SQLITE_STRING_MODE_UNICODE_STRICT,
     };
 
     if( $args->{mountpoints}) {
