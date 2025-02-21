@@ -527,8 +527,26 @@ sub _inflate_entry( $self, $entry ) {
     return $res
 }
 
+# This is far more paranoid than it should be. We should make sure we always
+# (and only ever) write UTF-8 encoded data to collection_json
 sub _inflate_collection( $self, $collection ) {
-    my $res = decode_json( $collection->{collection_json} );
+    my $str = $collection->{collection_json};
+
+    if( utf8::is_utf8( $str ) ) {
+        $str = encode('UTF-8', $str );
+    }
+
+    # First, try to treat it as UTF-8:
+    my $res;
+    eval {
+        $res = decode_json( $str );
+    };
+
+    # Maybe it was Latin-1 ?
+    if( $@ ) {
+        $str = encode 'UTF-8', decode 'Latin-1', $collection->{collection_json};
+        $res = decode_json( $str );
+    }
     $res->{collection_id} = $collection->{collection_id};
     return $res
 }
