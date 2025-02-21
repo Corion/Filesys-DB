@@ -503,6 +503,24 @@ SQL
     return $info
 }
 
+sub _decode_filename( $filename, $location = 'unknown' ) {
+    my $res;
+
+    if( utf8::is_utf8( $filename )) {
+        #warn "$location: <<$filename>> already is Unicode";
+        return $filename
+    }
+
+    eval {
+        $res = decode( 'UTF-8', $filename );
+    };
+    if( $@ ) {
+        warn "$location: <<$filename>> was stored as Latin-1";
+        $res = decode( 'Latin-1', $filename );
+    }
+    return $res
+}
+
 sub _inflate_filename( $self, $mountpoint, $filename ) {
     my $mp = $self->mountpoints->{$mountpoint};
     # Why do we need this? JSON->decode does not return UTF-8 strings?!
@@ -513,7 +531,7 @@ sub _inflate_filename( $self, $mountpoint, $filename ) {
     if( ref $filename ) {
         $filename = $filename->value;
     } else {
-        $filename = decode( 'UTF-8', $filename );
+        $filename = _decode_filename( $filename, '_inflate_filename' );
     }
 
     $filename = join "/", $mp->{directory}->value, $filename;
@@ -528,11 +546,12 @@ sub _inflate_entry( $self, $entry ) {
 }
 
 # This is far more paranoid than it should be. We should make sure we always
-# (and only ever) write UTF-8 encoded data to collection_json
-sub _inflate_collection( $self, $collection ) {
-    my $str = $collection->{collection_json};
+# (and only ever) write UTF-8 encoded data, especially filenames and JSON
+sub _inflate_json( $json ) {
+    my $str = $json;
 
     if( utf8::is_utf8( $str ) ) {
+        #warn "<<$str>> already is Unicode?!";
         $str = encode('UTF-8', $str );
     }
 
@@ -544,9 +563,16 @@ sub _inflate_collection( $self, $collection ) {
 
     # Maybe it was Latin-1 ?
     if( $@ ) {
-        $str = encode 'UTF-8', decode 'Latin-1', $collection->{collection_json};
+        warn "<<$str>> is Latin-1?!";
+        $str = encode 'UTF-8', decode 'Latin-1', $json;
         $res = decode_json( $str );
     }
+    return $res;
+}
+
+sub _inflate_collection( $self, $collection ) {
+    my $res = _inflate_json( $collection->{collection_json} );
+
     $res->{collection_id} = $collection->{collection_id};
     return $res
 }
