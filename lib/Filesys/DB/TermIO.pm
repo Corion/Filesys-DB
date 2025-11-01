@@ -61,3 +61,5 @@ sub msg($msg) {
 }
 # erase any still active status message
 END { status(""); }
+
+1;
