@@ -390,7 +390,7 @@ SQL
 
     } else {
         # $info->{filename} must exist
-        my $filename = $info->{filename};
+        my $filename = $info->{filename}->value;
         my $tmp_res = $self->selectall_named(<<'SQL', $mountpoint, $filename );
             delete from filesystem_entry
             where mountpoint=:mountpoint
