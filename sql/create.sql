@@ -51,27 +51,7 @@ create unique index idx_filesystem_entry_filename on filesystem_entry (mountpoin
 create index idx_filesystem_entry_filename_entry_id on filesystem_entry (mountpoint, filename, entry_id);
 create index idx_filesystem_entry_last_modified on filesystem_entry (entry_id, mime_type, mtime);
 
--- See also Audio::Directory
--- also, tags?!
--- drop table if exists filesystem_relation;
-create table filesystem_relation (
-      relation_json      varchar(65520) not null default '{}'
-
-    , relation_id        integer primary key not null
-    -- maybe, not everything corresponds to the fs
-
-    , child_id  generated always as (json_extract(relation_json, '$.child_id'))
-    , parent_id generated always as (json_extract(relation_json, '$.parent_id'))
-    , relation_type      generated always as (json_extract(relation_json, '$.relation_type')) -- 'directory', 'album', ???
-    -- the title applies to (relation_parent_id+relation_type, not to a specific instance!
-    --, title              generated always as (json_extract(relation_json, '$.title'))         -- 'directory', 'album', ???
-    , "position"         generated always as (json_extract(relation_json, '$.position'))      -- like track number, but management is harder
-);
-create unique index idx_filesystem_relation_relation_id on filesystem_relation (relation_id);
--- We need this one so we can auto-create new rows for files
--- but this implies that an entry cannot appear twice in a playlist?!
-create unique index idx_filesystem_relation_child_parent_id on filesystem_relation (relation_type,parent_id,child_id);
-
+/* The filesystem_collection is an arbitrary collection */
 create table filesystem_collection (
       collection_json        varchar(65520) not null default '{}'
     , collection_id          integer primary key not null

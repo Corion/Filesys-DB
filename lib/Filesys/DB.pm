@@ -404,18 +404,14 @@ SQL
     return $info
 }
 
-sub insert_or_update_relation( $self, $info ) {
-    my $value = encode_json( $info );
-    my $res = $self->selectall_named(<<'SQL', $value );
-        insert into filesystem_relation (relation_json)
-        values (:value)
-        on conflict(relation_type,parent_id,child_id) do
-        update set relation_json = :value
-        returning relation_id
-SQL
-    $info->{relation_id} = $res->{relation_id};
-    return $info
-}
+=head1 TABLES
+
+C<filesystem_membership> - the hierarchical relation, a filesystem entry can
+only be in one of these (at least until we implement hardlinks)
+
+C<filesystem_collection> - any group of filesystem entries, not hierarchical
+
+=cut
 
 sub find_memberships_by_type_child( $self, $collection_type, $_entry_id ) {
     my $entry_id = \$_entry_id;
