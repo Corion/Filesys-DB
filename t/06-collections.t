@@ -93,7 +93,8 @@ for my $gen (@generators) {
     );
 }
 
-my $collections_sizes = $store->selectall_named(<<'SQL');
+sub get_collection_sizes {
+    return $store->selectall_named(<<'SQL');
     select
            c.title
          , c.generator_id
@@ -103,6 +104,7 @@ my $collections_sizes = $store->selectall_named(<<'SQL');
   group by c.title, c.collection_id, c.generator_id
   order by c.title
 SQL
+}
 
 note "Launching filter tests";
 
@@ -113,7 +115,7 @@ my $expected = [
     { title => 'en',       count => 3, generator_id => 'test_languages' },
 ];
 
-is $collections_sizes, $expected, "A first round creates the expected collections";
+is get_collection_sizes(), $expected, "A first round creates the expected collections";
 # Recreate the collections
 # Check that we still have the same number of memberships
 
@@ -125,7 +127,7 @@ for my $gen (@generators) {
         name         => $gen->{name},
     );
 }
-is $collections_sizes, $expected, "Collection maintenance is idempotent";
+is get_collection_sizes(), $expected, "Collection maintenance is idempotent";
 
 # add an item to the documents and regenerate the collections, see them expand
 add_file( $new_file );
@@ -138,17 +140,6 @@ for my $gen (@generators) {
     );
 }
 
-$collections_sizes = $store->selectall_named(<<'SQL');
-    select
-           c.title
-         , c.generator_id
-         , count(*) as "count"
-      from filesystem_collection c
-      join filesystem_membership m using (collection_id)
-  group by c.title, c.collection_id, c.generator_id
-  order by c.title
-SQL
-
 note "Launching filter tests";
 
 $expected = [
@@ -158,7 +149,7 @@ $expected = [
     { title => 'en',       count => 4, generator_id => 'test_languages' },
 ];
 
-is $collections_sizes, $expected, "Adding a file creates the expected collections";
+is get_collection_sizes(), $expected, "Adding a file creates the expected collections";
 
 
 # remove an item from the documents and regenerate the collections
