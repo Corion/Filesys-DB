@@ -659,6 +659,7 @@ sub maintain_collections( $self, %options ) {
         my $collection_title = $rel->{collection_title};
         $collection_title = decode('UTF-8', $collection_title);
         next unless defined $collection_title; # NULLs don't get added
+        next if $collection_title eq EXISTS_BUT_EMPTY;
 
         if( ! $collections{ $collection_title }) {
             my $exists = $store->selectall_named(<<'', $collection_title, $generator_id );
