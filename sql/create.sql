@@ -11,7 +11,7 @@ create table filesystem_entry (
       entry_json    varchar(65520) not null default '{}'
     , entry_id     integer primary key not null
 
-    , last_scanned generated always as (json_extract(entry_json, '$.last_scanned'))
+    , last_scanned generated always as (json_extract(entry_json, '$.last_scanned')) stored
 
       -- should we really constrain the filename to be not null? What about
       -- emails and other documents stored elsewhere? Archive files?
