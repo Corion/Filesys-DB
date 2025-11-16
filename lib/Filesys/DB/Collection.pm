@@ -72,7 +72,7 @@ sub from_id( $class, $store, $id ) {
         select c.collection_id
              , c.collection_json
           FROM filesystem_collection c
-         where c.collection_id = $id
+         where c.collection_id = 0+$id
 SQL
     return $class->from_row( $store => $collection->[0] );
 }
