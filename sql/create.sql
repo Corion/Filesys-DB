@@ -74,6 +74,11 @@ create table filesystem_collection (
 create unique index idx_filesystem_collection_collection_id on filesystem_collection (collection_id);
 create unique index idx_filesystem_collection_directory_parent_id on filesystem_collection (collection_type,parent_id);
 
+/* The filesystem_membership maps the parent/child relationship of directories */
+/* If we were serious about inheritance, this would inherit the filesystem_collection
+   table maybe, or be maybe a star-schema thing with the filesystem_collection
+   table.
+*/
 create table filesystem_membership (
       membership_json      varchar(65520) not null default '{}'
     , membership_id        integer primary key not null
