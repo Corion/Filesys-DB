@@ -37,6 +37,7 @@ create table filesystem_entry (
       -- also we should have metadata like "last updated" etc?
       -- or do we want all of this in another table?!
     , title        generated always as (json_extract(entry_json, '$.content.title'))     stored
+    , artist       generated always as (json_extract(entry_json, '$.content.artist'))    stored
     , duration     generated always as (json_extract(entry_json, '$.content.duration'))  stored
     , bpm          generated always as (json_extract(entry_json, '$.content.bpm'))       stored
     , html         generated always as (json_extract(entry_json, '$.content.html'))      stored
